@@ -1,3 +1,4 @@
+import logging
 import shutil
 import uuid
 from pathlib import Path
@@ -9,6 +10,7 @@ from ..database import connection
 from ..services.pdf_processor import process_pdf
 
 router = APIRouter(prefix="/books", tags=["books"])
+logger = logging.getLogger(__name__)
 
 
 async def index_book(book_id: str, path: Path, title: str) -> None:
@@ -17,6 +19,7 @@ async def index_book(book_id: str, path: Path, title: str) -> None:
         with connection() as conn:
             conn.execute("UPDATE books SET chunks_indexed=?, processing_status='ready' WHERE id=?", (count, book_id))
     except Exception:
+        logger.exception("Failed to index book %s (%s)", book_id, title)
         with connection() as conn:
             conn.execute("UPDATE books SET processing_status='failed' WHERE id=?", (book_id,))
 
