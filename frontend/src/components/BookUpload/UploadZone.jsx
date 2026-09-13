@@ -6,18 +6,30 @@ function UploadZone({ onUploaded }) {
   const [phase, setPhase] = useState("");
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [error, setError] = useState("");
 
   async function upload(file) {
-    if (!file || file.type !== "application/pdf" || busy) return;
+    if (!file || busy) return;
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      setError("Only PDF files are supported.");
+      return;
+    }
     setBusy(true);
+    setError("");
     try {
       const form = new FormData();
       form.append("file", file);
       form.append("title", title || file.name);
       if (phase) form.append("phase", phase);
       const response = await fetch("/api/books/upload", { method: "POST", body: form });
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(`Upload failed (${response.status}): ${detail || response.statusText}`);
+      }
       onUploaded(await response.json());
       setTitle("");
+    } catch (err) {
+      setError(err.message || "Upload failed. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -43,6 +55,7 @@ function UploadZone({ onUploaded }) {
         {busy ? "Uploading…" : "Drop a PDF here or click to browse"}
         <input type="file" accept="application/pdf" hidden onChange={(event) => upload(event.target.files[0])} />
       </label>
+      {error && <p className="upload-error">{error}</p>}
     </div>
   );
 }

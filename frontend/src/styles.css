@@ -71,6 +71,7 @@ h1 { font-size: clamp(2rem, 7vw, 4rem); line-height: 1; margin: .25rem 0 1rem; }
 .upload-zone input { padding: .6rem; border-radius: .5rem; border: 1px solid #334155; background: #172033; color: inherit; }
 .dropzone { display: block; text-align: center; padding: 2rem; border: 2px dashed #334155; border-radius: .8rem; color: #9ca3af; }
 .upload-zone.dragging .dropzone { border-color: #67e8f9; color: #67e8f9; }
+.upload-error { color: #f87171; font-size: .85rem; margin: 0; }
 .book-library { list-style: none; padding: 0; display: grid; gap: .5rem; }
 .book-library li { display: flex; gap: .75rem; align-items: center; background: #172033; padding: .7rem 1rem; border-radius: .5rem; }
 .book-library .status { font-size: .7rem; text-transform: uppercase; padding: .15rem .5rem; border-radius: 999px; background: #334155; }
