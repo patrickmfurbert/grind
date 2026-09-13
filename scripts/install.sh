@@ -10,6 +10,7 @@ command -v ollama >/dev/null || { echo "Install Ollama before continuing"; exit 
 
 ollama pull nomic-embed-text
 "$ROOT/scripts/setup_qdrant.sh"
+rm -rf .venv
 python3 -m venv .venv
 .venv/bin/pip install -r backend/requirements.txt
 npm --prefix frontend install
