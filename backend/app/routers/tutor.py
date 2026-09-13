@@ -7,12 +7,18 @@ from pydantic import BaseModel
 
 from ..database import connection
 from ..services.openrouter import stream_chat
+from ..services.rag import retrieve
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tutor", tags=["tutor"])
 
-PROMPT = """You are a Socratic tutor for Pat, a Software Engineer II who builds Java/Spring Boot microservices at Paychex using MongoDB, Kafka, Dapr, OpenShift, Kong, Jenkins, Gradle, Splunk, and OpenTelemetry. Pat transitioned from clinical nursing. Start from why, use useful visual or real-world analogies, make Pat defend answers, ask follow-up questions about failures and trade-offs, and get harder with demonstrated mastery. Current concept: {concept}. Mastery: {mastery}/5."""
+PROMPT = """You are a Socratic tutor for Pat, a Software Engineer II who builds Java/Spring Boot microservices at Paychex using MongoDB, Kafka, Dapr, OpenShift, Kong, Jenkins, Gradle, Splunk, and OpenTelemetry. Pat transitioned from clinical nursing. Start from why, use useful visual or real-world analogies, make Pat defend answers, ask follow-up questions about failures and trade-offs, and get harder with demonstrated mastery. Current concept: {concept}. Mastery: {mastery}/5.{book_context}"""
+
+BOOK_CONTEXT_TEMPLATE = """
+
+Relevant passages from Pat's uploaded books (cite the title/page when you draw on these):
+{passages}"""
 
 
 class ChatRequest(BaseModel):
@@ -26,7 +32,14 @@ async def chat(payload: ChatRequest):
     with connection() as conn:
         concept = conn.execute("SELECT title, mastery_level FROM concepts WHERE id=?", (payload.concept_id,)).fetchone()
     name, mastery = (concept["title"], concept["mastery_level"]) if concept else (payload.concept_id, 0)
-    messages = [{"role": "system", "content": PROMPT.format(concept=name, mastery=mastery)}, *payload.conversation_history, {"role": "user", "content": payload.message}]
+
+    # Retrieve on the concept name rather than the student's raw answer: it stays a
+    # consistent, on-topic query regardless of how the student phrases their response,
+    # so the tutor reliably grounds itself in the right book passages every turn.
+    passages = await retrieve(name)
+    book_context = BOOK_CONTEXT_TEMPLATE.format(passages=passages) if passages else ""
+
+    messages = [{"role": "system", "content": PROMPT.format(concept=name, mastery=mastery, book_context=book_context)}, *payload.conversation_history, {"role": "user", "content": payload.message}]
 
     async def events():
         try:

@@ -1,4 +1,7 @@
+import json
+
 import httpx
+import pytest
 import respx
 
 
@@ -7,6 +10,18 @@ SSE_BODY = (
     'data: {"choices":[{"delta":{"content":" do"}}]}\n\n'
     "data: [DONE]\n\n"
 )
+
+
+@pytest.fixture(autouse=True)
+def no_book_context(monkeypatch):
+    """Tutor tests exercise OpenRouter streaming, not RAG retrieval; stub retrieve() so
+    they don't depend on a real Qdrant/Ollama instance being reachable."""
+    import backend.app.routers.tutor as tutor_module
+
+    async def fake_retrieve(query, limit=4):
+        return ""
+
+    monkeypatch.setattr(tutor_module, "retrieve", fake_retrieve)
 
 
 @respx.mock
@@ -52,3 +67,31 @@ def test_chat_emits_error_event_when_openrouter_fails(client):
     assert response.status_code == 200
     assert '"error"' in response.text
     assert response.text.endswith("data: [DONE]\n\n")
+
+
+@respx.mock
+def test_chat_injects_retrieved_book_passages_into_system_prompt(client, monkeypatch):
+    """When retrieve() finds relevant book passages, they should be appended to the
+    system prompt sent to OpenRouter so the tutor can ground its response in them."""
+    import backend.app.routers.tutor as tutor_module
+
+    async def fake_retrieve(query, limit=4):
+        assert query == "why-distributed-systems-exist" or query  # called with the concept name
+        return "[Designing Data-Intensive Applications, p. 12]\nReplication trades consistency for availability."
+
+    monkeypatch.setattr(tutor_module, "retrieve", fake_retrieve)
+
+    route = respx.post("https://openrouter.ai/api/v1/chat/completions").mock(
+        return_value=httpx.Response(200, content="data: [DONE]\n\n", headers={"content-type": "text/event-stream"})
+    )
+
+    response = client.post(
+        "/tutor/chat",
+        json={"concept_id": "why-distributed-systems-exist", "message": "Why does it exist?", "conversation_history": []},
+    )
+    assert response.status_code == 200
+
+    sent_body = json.loads(route.calls.last.request.content)
+    system_message = sent_body["messages"][0]["content"]
+    assert "Replication trades consistency for availability." in system_message
+    assert "Designing Data-Intensive Applications, p. 12" in system_message
