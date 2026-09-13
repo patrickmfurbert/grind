@@ -1,0 +1,24 @@
+name: Deploy GRIND
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.Z420_HOST }}
+          username: ${{ secrets.Z420_USER }}
+          key: ${{ secrets.Z420_SSH_KEY }}
+          script: |
+            set -e
+            cd ${{ secrets.Z420_DEPLOY_PATH }}
+            git pull --ff-only origin main
+            .venv/bin/pip install -r backend/requirements.txt
+            npm --prefix frontend ci
+            npm --prefix frontend run build
+            sudo systemctl restart grind-backend
+            sudo systemctl reload nginx

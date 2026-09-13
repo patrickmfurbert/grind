@@ -1,0 +1,10 @@
+[
+  {"id":"why-distributed-systems","phase":"Phase 1","title":"Why distributed systems exist","description":"The forces that make one machine insufficient.","prerequisites":[]},
+  {"id":"failure-modes","phase":"Phase 1","title":"Failure modes","description":"How independent machines fail and disagree.","prerequisites":["why-distributed-systems"]},
+  {"id":"cap-theorem","phase":"Phase 1","title":"CAP theorem","description":"Consistency, availability, and partitions from first principles.","prerequisites":["failure-modes"]},
+  {"id":"kafka-architecture","phase":"Phase 2","title":"Kafka architecture","description":"Brokers, topics, partitions, and consumer groups.","prerequisites":["cap-theorem"]},
+  {"id":"kubernetes-architecture","phase":"Phase 2.5","title":"Kubernetes architecture","description":"Control planes and worker nodes.","prerequisites":["kafka-architecture"]},
+  {"id":"rag","phase":"Phase 3","title":"Retrieval augmented generation","description":"Grounding model responses with retrieved knowledge.","prerequisites":["kubernetes-architecture"]},
+  {"id":"distributed-tracing","phase":"Phase 4","title":"Distributed tracing","description":"Following a request across service boundaries.","prerequisites":["kafka-architecture"]},
+  {"id":"system-design-methodology","phase":"Phase 5","title":"System design methodology","description":"A repeatable framework for technical design interviews.","prerequisites":["cap-theorem","distributed-tracing"]}
+]

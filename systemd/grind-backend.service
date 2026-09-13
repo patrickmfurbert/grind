@@ -1,0 +1,13 @@
+[Unit]
+Description=GRIND FastAPI backend
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/grind
+EnvironmentFile=/opt/grind/.env
+ExecStart=/opt/grind/.venv/bin/uvicorn backend.app.main:app --host 127.0.0.1 --port 8001
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
