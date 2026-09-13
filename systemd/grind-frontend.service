@@ -4,8 +4,9 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/grind/frontend
-ExecStart=/usr/bin/npm run start
+User=__DEPLOY_USER__
+WorkingDirectory=__DEPLOY_ROOT__/frontend
+ExecStart=__NPM_BIN__ run start
 Restart=on-failure
 
 [Install]
