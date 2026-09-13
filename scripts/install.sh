@@ -23,11 +23,12 @@ fi
 
 DEPLOY_USER="$(whoami)"
 NPM_BIN="$(command -v npm)"
+NPM_DIR="$(dirname "$NPM_BIN")"
 sudo install -m 644 nginx/grind.conf /etc/nginx/sites-available/grind
 sudo ln -sfn /etc/nginx/sites-available/grind /etc/nginx/sites-enabled/grind
 sed -e "s#__DEPLOY_ROOT__#$ROOT#g" -e "s#__DEPLOY_USER__#$DEPLOY_USER#g" \
   systemd/grind-backend.service | sudo tee /etc/systemd/system/grind-backend.service >/dev/null
-sed -e "s#__DEPLOY_ROOT__#$ROOT#g" -e "s#__DEPLOY_USER__#$DEPLOY_USER#g" -e "s#__NPM_BIN__#$NPM_BIN#g" \
+sed -e "s#__DEPLOY_ROOT__#$ROOT#g" -e "s#__DEPLOY_USER__#$DEPLOY_USER#g" -e "s#__NPM_BIN__#$NPM_BIN#g" -e "s#__NPM_DIR__#$NPM_DIR#g" \
   systemd/grind-frontend.service | sudo tee /etc/systemd/system/grind-frontend.service >/dev/null
 sudo systemctl daemon-reload
 sudo systemctl enable --now grind-backend grind-frontend

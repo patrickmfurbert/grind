@@ -6,6 +6,7 @@ After=network.target
 Type=simple
 User=__DEPLOY_USER__
 WorkingDirectory=__DEPLOY_ROOT__/frontend
+Environment=PATH=__NPM_DIR__:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ExecStart=__NPM_BIN__ run start
 Restart=on-failure
 
