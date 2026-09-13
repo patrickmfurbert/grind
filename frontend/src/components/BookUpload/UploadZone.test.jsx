@@ -12,7 +12,7 @@ afterEach(() => {
 });
 
 describe("UploadZone", () => {
-  it("calls onUploaded with the response on a successful upload", async () => {
+  it("stages a selected file without uploading until Upload book is clicked", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ book_id: "abc", chunks_indexed: 0 }),
@@ -23,6 +23,11 @@ describe("UploadZone", () => {
     render(<UploadZone onUploaded={onUploaded} />);
     const input = document.querySelector('input[type="file"]');
     await userEvent.upload(input, pdfFile());
+
+    expect(screen.getByText(/book\.pdf/)).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: /upload book/i }));
 
     await waitFor(() => expect(onUploaded).toHaveBeenCalledWith({ book_id: "abc", chunks_indexed: 0 }));
     expect(screen.queryByText(/upload failed/i)).not.toBeInTheDocument();
@@ -41,8 +46,14 @@ describe("UploadZone", () => {
     render(<UploadZone onUploaded={onUploaded} />);
     const input = document.querySelector('input[type="file"]');
     await userEvent.upload(input, pdfFile());
+    await userEvent.click(screen.getByRole("button", { name: /upload book/i }));
 
     await waitFor(() => expect(screen.getByText(/upload failed \(413\)/i)).toBeInTheDocument());
     expect(onUploaded).not.toHaveBeenCalled();
+  });
+
+  it("the upload button is disabled until a file is staged", () => {
+    render(<UploadZone onUploaded={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /upload book/i })).toBeDisabled();
   });
 });

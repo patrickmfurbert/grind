@@ -19,20 +19,13 @@ async def test_embed_batches_requests():
 
 
 @respx.mock
-async def test_embed_retries_on_timeout_then_succeeds():
-    route = respx.post("http://localhost:11434/api/embed").mock(
-        side_effect=[httpx.TimeoutException("slow"), httpx.Response(200, json={"embeddings": [[0.1]]})]
-    )
+async def test_embed_propagates_errors_without_retrying():
+    """No retry logic: Ollama only has one processing slot, so retries just queue behind
+    the still-running "abandoned" request instead of helping. A failure should surface
+    immediately after a single attempt."""
+    route = respx.post("http://localhost:11434/api/embed").mock(side_effect=httpx.ReadTimeout("slow"))
 
-    vectors = await embed(["one chunk"])
-
-    assert vectors == [[0.1]]
-    assert route.call_count == 2
-
-
-@respx.mock
-async def test_embed_gives_up_after_max_retries():
-    respx.post("http://localhost:11434/api/embed").mock(side_effect=httpx.TimeoutException("always slow"))
-
-    with pytest.raises(httpx.TimeoutException):
+    with pytest.raises(httpx.ReadTimeout):
         await embed(["one chunk"])
+
+    assert route.call_count == 1
