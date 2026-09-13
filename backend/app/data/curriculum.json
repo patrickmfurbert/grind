@@ -1,10 +1,540 @@
 [
-  {"id":"why-distributed-systems","phase":"Phase 1","title":"Why distributed systems exist","description":"The forces that make one machine insufficient.","prerequisites":[]},
-  {"id":"failure-modes","phase":"Phase 1","title":"Failure modes","description":"How independent machines fail and disagree.","prerequisites":["why-distributed-systems"]},
-  {"id":"cap-theorem","phase":"Phase 1","title":"CAP theorem","description":"Consistency, availability, and partitions from first principles.","prerequisites":["failure-modes"]},
-  {"id":"kafka-architecture","phase":"Phase 2","title":"Kafka architecture","description":"Brokers, topics, partitions, and consumer groups.","prerequisites":["cap-theorem"]},
-  {"id":"kubernetes-architecture","phase":"Phase 2.5","title":"Kubernetes architecture","description":"Control planes and worker nodes.","prerequisites":["kafka-architecture"]},
-  {"id":"rag","phase":"Phase 3","title":"Retrieval augmented generation","description":"Grounding model responses with retrieved knowledge.","prerequisites":["kubernetes-architecture"]},
-  {"id":"distributed-tracing","phase":"Phase 4","title":"Distributed tracing","description":"Following a request across service boundaries.","prerequisites":["kafka-architecture"]},
-  {"id":"system-design-methodology","phase":"Phase 5","title":"System design methodology","description":"A repeatable framework for technical design interviews.","prerequisites":["cap-theorem","distributed-tracing"]}
+  {
+    "id": "why-distributed-systems-exist",
+    "phase": "Phase 1",
+    "title": "Why distributed systems exist",
+    "description": "Why distributed systems exist \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": []
+  },
+  {
+    "id": "why-distributed-systems-fail",
+    "phase": "Phase 1",
+    "title": "Why distributed systems fail",
+    "description": "Why distributed systems fail \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "why-distributed-systems-exist"
+    ]
+  },
+  {
+    "id": "cap-theorem-from-first-principles",
+    "phase": "Phase 1",
+    "title": "CAP theorem from first principles",
+    "description": "CAP theorem from first principles \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "why-distributed-systems-fail"
+    ]
+  },
+  {
+    "id": "consistency-models",
+    "phase": "Phase 1",
+    "title": "Consistency models",
+    "description": "Consistency models \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "cap-theorem-from-first-principles"
+    ]
+  },
+  {
+    "id": "availability-vs-consistency-trade-offs",
+    "phase": "Phase 1",
+    "title": "Availability vs consistency trade-offs",
+    "description": "Availability vs consistency trade-offs \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "consistency-models"
+    ]
+  },
+  {
+    "id": "fault-tolerance-and-resilience-patterns",
+    "phase": "Phase 1",
+    "title": "Fault tolerance and resilience patterns",
+    "description": "Fault tolerance and resilience patterns \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "availability-vs-consistency-trade-offs"
+    ]
+  },
+  {
+    "id": "replication-strategies",
+    "phase": "Phase 1",
+    "title": "Replication strategies",
+    "description": "Replication strategies \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "fault-tolerance-and-resilience-patterns"
+    ]
+  },
+  {
+    "id": "why-ci-cd-exists",
+    "phase": "Phase 1.5",
+    "title": "Why CI/CD exists",
+    "description": "Why CI/CD exists \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "replication-strategies"
+    ]
+  },
+  {
+    "id": "jenkins-architecture",
+    "phase": "Phase 1.5",
+    "title": "Jenkins architecture",
+    "description": "Jenkins architecture \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "why-ci-cd-exists"
+    ]
+  },
+  {
+    "id": "declarative-pipelines-and-jenkinsfile",
+    "phase": "Phase 1.5",
+    "title": "Declarative pipelines and Jenkinsfile",
+    "description": "Declarative pipelines and Jenkinsfile \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "jenkins-architecture"
+    ]
+  },
+  {
+    "id": "gradle-and-build-automation",
+    "phase": "Phase 1.5",
+    "title": "Gradle and build automation",
+    "description": "Gradle and build automation \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "declarative-pipelines-and-jenkinsfile"
+    ]
+  },
+  {
+    "id": "groovy-scripting-in-pipelines",
+    "phase": "Phase 1.5",
+    "title": "Groovy scripting in pipelines",
+    "description": "Groovy scripting in pipelines \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "gradle-and-build-automation"
+    ]
+  },
+  {
+    "id": "artifactory-and-artifact-management",
+    "phase": "Phase 1.5",
+    "title": "Artifactory and artifact management",
+    "description": "Artifactory and artifact management \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "groovy-scripting-in-pipelines"
+    ]
+  },
+  {
+    "id": "pipeline-as-code-patterns",
+    "phase": "Phase 1.5",
+    "title": "Pipeline as code patterns",
+    "description": "Pipeline as code patterns \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "artifactory-and-artifact-management"
+    ]
+  },
+  {
+    "id": "testing-stages-in-pipelines",
+    "phase": "Phase 1.5",
+    "title": "Testing stages in pipelines",
+    "description": "Testing stages in pipelines \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "pipeline-as-code-patterns"
+    ]
+  },
+  {
+    "id": "why-microservices-exist",
+    "phase": "Phase 2",
+    "title": "Why microservices exist",
+    "description": "Why microservices exist \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "testing-stages-in-pipelines"
+    ]
+  },
+  {
+    "id": "event-driven-architecture",
+    "phase": "Phase 2",
+    "title": "Event driven architecture",
+    "description": "Event driven architecture \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "why-microservices-exist"
+    ]
+  },
+  {
+    "id": "kafka-architecture",
+    "phase": "Phase 2",
+    "title": "Kafka architecture",
+    "description": "Kafka architecture \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "event-driven-architecture"
+    ]
+  },
+  {
+    "id": "kafka-producer-and-consumer-patterns",
+    "phase": "Phase 2",
+    "title": "Kafka producer and consumer patterns",
+    "description": "Kafka producer and consumer patterns \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "kafka-architecture"
+    ]
+  },
+  {
+    "id": "spring-boot-microservice-internals",
+    "phase": "Phase 2",
+    "title": "Spring Boot microservice internals",
+    "description": "Spring Boot microservice internals \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "kafka-producer-and-consumer-patterns"
+    ]
+  },
+  {
+    "id": "service-discovery-and-communication-patterns",
+    "phase": "Phase 2",
+    "title": "Service discovery and communication patterns",
+    "description": "Service discovery and communication patterns \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "spring-boot-microservice-internals"
+    ]
+  },
+  {
+    "id": "api-gateway-patterns-kong",
+    "phase": "Phase 2",
+    "title": "API gateway patterns (Kong)",
+    "description": "API gateway patterns (Kong) \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "service-discovery-and-communication-patterns"
+    ]
+  },
+  {
+    "id": "dapr-distributed-application-runtime",
+    "phase": "Phase 2",
+    "title": "Dapr distributed application runtime",
+    "description": "Dapr distributed application runtime \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "api-gateway-patterns-kong"
+    ]
+  },
+  {
+    "id": "mongodb-document-model",
+    "phase": "Phase 2",
+    "title": "MongoDB document model",
+    "description": "MongoDB document model \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "dapr-distributed-application-runtime"
+    ]
+  },
+  {
+    "id": "why-container-orchestration-exists",
+    "phase": "Phase 2.5",
+    "title": "Why container orchestration exists",
+    "description": "Why container orchestration exists \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "mongodb-document-model"
+    ]
+  },
+  {
+    "id": "docker-fundamentals",
+    "phase": "Phase 2.5",
+    "title": "Docker fundamentals",
+    "description": "Docker fundamentals \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "why-container-orchestration-exists"
+    ]
+  },
+  {
+    "id": "kubernetes-architecture",
+    "phase": "Phase 2.5",
+    "title": "Kubernetes architecture",
+    "description": "Kubernetes architecture \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "docker-fundamentals"
+    ]
+  },
+  {
+    "id": "pods-deployments-services-configmaps-secrets",
+    "phase": "Phase 2.5",
+    "title": "Pods, Deployments, Services, ConfigMaps, Secrets",
+    "description": "Pods, Deployments, Services, ConfigMaps, Secrets \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "kubernetes-architecture"
+    ]
+  },
+  {
+    "id": "namespaces-and-resource-management",
+    "phase": "Phase 2.5",
+    "title": "Namespaces and resource management",
+    "description": "Namespaces and resource management \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "pods-deployments-services-configmaps-secrets"
+    ]
+  },
+  {
+    "id": "openshift-vs-vanilla-kubernetes",
+    "phase": "Phase 2.5",
+    "title": "OpenShift vs vanilla Kubernetes",
+    "description": "OpenShift vs vanilla Kubernetes \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "namespaces-and-resource-management"
+    ]
+  },
+  {
+    "id": "from-commit-to-running-in-production",
+    "phase": "Phase 2.5",
+    "title": "From commit to running in production",
+    "description": "From commit to running in production \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "openshift-vs-vanilla-kubernetes"
+    ]
+  },
+  {
+    "id": "full-pipeline-story",
+    "phase": "Phase 2.5",
+    "title": "Full pipeline story",
+    "description": "Full pipeline story \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "from-commit-to-running-in-production"
+    ]
+  },
+  {
+    "id": "why-machine-learning-exists",
+    "phase": "Phase 3",
+    "title": "Why machine learning exists",
+    "description": "Why machine learning exists \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "full-pipeline-story"
+    ]
+  },
+  {
+    "id": "supervised-vs-unsupervised-vs-reinforcement-learning",
+    "phase": "Phase 3",
+    "title": "Supervised vs unsupervised vs reinforcement learning",
+    "description": "Supervised vs unsupervised vs reinforcement learning \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "why-machine-learning-exists"
+    ]
+  },
+  {
+    "id": "neural-networks-from-first-principles",
+    "phase": "Phase 3",
+    "title": "Neural networks from first principles",
+    "description": "Neural networks from first principles \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "supervised-vs-unsupervised-vs-reinforcement-learning"
+    ]
+  },
+  {
+    "id": "embeddings",
+    "phase": "Phase 3",
+    "title": "Embeddings",
+    "description": "Embeddings \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "neural-networks-from-first-principles"
+    ]
+  },
+  {
+    "id": "vector-databases-and-similarity-search",
+    "phase": "Phase 3",
+    "title": "Vector databases and similarity search",
+    "description": "Vector databases and similarity search \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "embeddings"
+    ]
+  },
+  {
+    "id": "retrieval-augmented-generation",
+    "phase": "Phase 3",
+    "title": "Retrieval augmented generation",
+    "description": "Retrieval augmented generation \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "vector-databases-and-similarity-search"
+    ]
+  },
+  {
+    "id": "llm-fundamentals",
+    "phase": "Phase 3",
+    "title": "LLM fundamentals",
+    "description": "LLM fundamentals \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "retrieval-augmented-generation"
+    ]
+  },
+  {
+    "id": "ai-in-production",
+    "phase": "Phase 3",
+    "title": "AI in production",
+    "description": "AI in production \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "llm-fundamentals"
+    ]
+  },
+  {
+    "id": "agentic-patterns-and-mcp",
+    "phase": "Phase 3",
+    "title": "Agentic patterns and MCP",
+    "description": "Agentic patterns and MCP \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "ai-in-production"
+    ]
+  },
+  {
+    "id": "python-for-ml",
+    "phase": "Phase 3",
+    "title": "Python for ML",
+    "description": "Python for ML \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "agentic-patterns-and-mcp"
+    ]
+  },
+  {
+    "id": "why-observability-exists",
+    "phase": "Phase 4",
+    "title": "Why observability exists",
+    "description": "Why observability exists \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "python-for-ml"
+    ]
+  },
+  {
+    "id": "logging-fundamentals-and-structured-logging",
+    "phase": "Phase 4",
+    "title": "Logging fundamentals and structured logging",
+    "description": "Logging fundamentals and structured logging \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "why-observability-exists"
+    ]
+  },
+  {
+    "id": "metrics-and-time-series-data",
+    "phase": "Phase 4",
+    "title": "Metrics and time series data",
+    "description": "Metrics and time series data \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "logging-fundamentals-and-structured-logging"
+    ]
+  },
+  {
+    "id": "distributed-tracing",
+    "phase": "Phase 4",
+    "title": "Distributed tracing",
+    "description": "Distributed tracing \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "metrics-and-time-series-data"
+    ]
+  },
+  {
+    "id": "opentelemetry",
+    "phase": "Phase 4",
+    "title": "OpenTelemetry",
+    "description": "OpenTelemetry \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "distributed-tracing"
+    ]
+  },
+  {
+    "id": "splunk-log-ingestion-and-dashboards",
+    "phase": "Phase 4",
+    "title": "Splunk log ingestion and dashboards",
+    "description": "Splunk log ingestion and dashboards \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "opentelemetry"
+    ]
+  },
+  {
+    "id": "alerting-and-on-call-patterns",
+    "phase": "Phase 4",
+    "title": "Alerting and on-call patterns",
+    "description": "Alerting and on-call patterns \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "splunk-log-ingestion-and-dashboards"
+    ]
+  },
+  {
+    "id": "observability-for-microservices",
+    "phase": "Phase 4",
+    "title": "Observability for microservices",
+    "description": "Observability for microservices \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "alerting-and-on-call-patterns"
+    ]
+  },
+  {
+    "id": "system-design-interview-methodology",
+    "phase": "Phase 5",
+    "title": "System design interview methodology",
+    "description": "System design interview methodology \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "observability-for-microservices"
+    ]
+  },
+  {
+    "id": "how-to-approach-any-system-design-problem",
+    "phase": "Phase 5",
+    "title": "How to approach any system design problem",
+    "description": "How to approach any system design problem \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "system-design-interview-methodology"
+    ]
+  },
+  {
+    "id": "common-system-design-patterns",
+    "phase": "Phase 5",
+    "title": "Common system design patterns",
+    "description": "Common system design patterns \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "how-to-approach-any-system-design-problem"
+    ]
+  },
+  {
+    "id": "design-a-url-shortener",
+    "phase": "Phase 5",
+    "title": "Design a URL shortener",
+    "description": "Design a URL shortener \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "common-system-design-patterns"
+    ]
+  },
+  {
+    "id": "design-a-notification-system",
+    "phase": "Phase 5",
+    "title": "Design a notification system",
+    "description": "Design a notification system \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "design-a-url-shortener"
+    ]
+  },
+  {
+    "id": "design-a-real-time-chat-system",
+    "phase": "Phase 5",
+    "title": "Design a real time chat system",
+    "description": "Design a real time chat system \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "design-a-notification-system"
+    ]
+  },
+  {
+    "id": "design-a-distributed-cache",
+    "phase": "Phase 5",
+    "title": "Design a distributed cache",
+    "description": "Design a distributed cache \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "design-a-real-time-chat-system"
+    ]
+  },
+  {
+    "id": "design-a-clinical-patient-monitoring-system",
+    "phase": "Phase 5",
+    "title": "Design a clinical patient monitoring system",
+    "description": "Design a clinical patient monitoring system \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "design-a-distributed-cache"
+    ]
+  },
+  {
+    "id": "trade-off-articulation-framework",
+    "phase": "Phase 5",
+    "title": "Trade-off articulation framework",
+    "description": "Trade-off articulation framework \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "design-a-clinical-patient-monitoring-system"
+    ]
+  },
+  {
+    "id": "how-to-whiteboard-under-pressure",
+    "phase": "Phase 5",
+    "title": "How to whiteboard under pressure",
+    "description": "How to whiteboard under pressure \u2014 bottom-up explanation, trade-offs, and interview talking points.",
+    "prerequisites": [
+      "trade-off-articulation-framework"
+    ]
+  }
 ]
