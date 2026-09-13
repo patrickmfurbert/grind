@@ -1,7 +1,7 @@
 import dagre from "dagre";
 
 const NODE_WIDTH = 210;
-const NODE_HEIGHT = 110;
+const NODE_HEIGHT = 160;
 
 /**
  * Lays out nodes top-to-bottom by prerequisite dependency using dagre, so concepts
