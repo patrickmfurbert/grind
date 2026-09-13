@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import QuizCard from "../components/Quiz/QuizCard";
 import QuizResult from "../components/Quiz/QuizResult";
 import SpacedRepetition from "../components/Quiz/SpacedRepetition";
+import NoConceptSelected from "../components/NoConceptSelected";
 import { useQuiz } from "../hooks/useQuiz";
 import { useStore } from "../store";
 
@@ -19,7 +20,7 @@ function Quiz() {
     if (activeConcept) generate(quizType);
   }, [activeConcept, quizType, generate]);
 
-  if (!activeConcept) return <Navigate to="/" replace />;
+  if (!activeConcept) return <NoConceptSelected verb="quiz" />;
 
   return (
     <section className="quiz">

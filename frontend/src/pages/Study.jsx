@@ -1,5 +1,6 @@
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import TutorChat from "../components/Tutor/TutorChat";
+import NoConceptSelected from "../components/NoConceptSelected";
 import { useStore } from "../store";
 
 /** Active study session: Socratic tutor chat scoped to the currently selected concept. */
@@ -7,7 +8,7 @@ function Study() {
   const { activeConcept } = useStore();
   const navigate = useNavigate();
 
-  if (!activeConcept) return <Navigate to="/" replace />;
+  if (!activeConcept) return <NoConceptSelected verb="study" />;
 
   return (
     <section className="study">
