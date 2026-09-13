@@ -32,7 +32,14 @@ async def embed(texts: list[str], context: str | None = None) -> list[list[float
     async with _embed_lock, httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
         for start in range(0, total, BATCH_SIZE):
             batch = texts[start : start + BATCH_SIZE]
-            response = await client.post(f"{settings.ollama_host}/api/embed", json={"model": "nomic-embed-text", "input": batch})
+            # This box's GPU (an old Kepler-era Quadro K600) crashes Ollama's Vulkan backend
+            # ("device lost") partway through sustained embedding workloads. num_gpu=0 forces
+            # CPU-only inference for this request, which is barely slower for an embedding
+            # model this small and avoids the crash entirely.
+            response = await client.post(
+                f"{settings.ollama_host}/api/embed",
+                json={"model": "nomic-embed-text", "input": batch, "options": {"num_gpu": 0}},
+            )
             response.raise_for_status()
             vectors.extend(response.json()["embeddings"])
             # Only log progress for multi-batch calls (book indexing); a single-chunk RAG
