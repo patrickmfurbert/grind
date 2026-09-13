@@ -3,10 +3,13 @@ import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useTutor } from "./useTutor";
 
-function sseResponse(chunks) {
+function sseResponse(chunks, options = {}) {
+  const { ok = true, status = 200 } = options;
   const encoder = new TextEncoder();
   let index = 0;
   return {
+    ok,
+    status,
     body: {
       getReader() {
         return {
@@ -62,5 +65,36 @@ describe("useTutor", () => {
     expect(body.concept_id).toBe("cap-theorem");
     expect(body.message).toBe("hello");
     expect(body.conversation_history).toEqual([]);
+  });
+
+  it("renders a mid-stream error event as a warning in the assistant reply", async () => {
+    global.fetch = vi.fn().mockResolvedValue(
+      sseResponse([
+        'data: {"token": "Let\'s "}\n\n',
+        'data: {"error": "The tutor is unavailable right now. Please try again."}\n\n',
+        "data: [DONE]\n\n",
+      ])
+    );
+
+    const { result } = renderHook(() => useTutor("cap-theorem"));
+    await act(async () => {
+      await result.current.send("hello");
+    });
+
+    expect(result.current.messages[1].content).toContain("Let's");
+    expect(result.current.messages[1].content).toContain("⚠️ The tutor is unavailable right now");
+    expect(result.current.streaming).toBe(false);
+  });
+
+  it("renders an error when the request itself fails", async () => {
+    global.fetch = vi.fn().mockResolvedValue(sseResponse([], { ok: false, status: 500 }));
+
+    const { result } = renderHook(() => useTutor("cap-theorem"));
+    await act(async () => {
+      await result.current.send("hello");
+    });
+
+    expect(result.current.messages[1].content).toContain("⚠️");
+    expect(result.current.streaming).toBe(false);
   });
 });

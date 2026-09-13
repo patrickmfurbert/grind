@@ -1,4 +1,5 @@
 import json
+import logging
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
@@ -6,6 +7,8 @@ from pydantic import BaseModel
 
 from ..database import connection
 from ..services.openrouter import stream_chat
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tutor", tags=["tutor"])
 
@@ -26,8 +29,16 @@ async def chat(payload: ChatRequest):
     messages = [{"role": "system", "content": PROMPT.format(concept=name, mastery=mastery)}, *payload.conversation_history, {"role": "user", "content": payload.message}]
 
     async def events():
-        async for token in stream_chat(messages):
-            yield f"data: {json.dumps({'token': token})}\n\n"
+        try:
+            async for token in stream_chat(messages):
+                yield f"data: {json.dumps({'token': token})}\n\n"
+        except Exception:
+            # The stream's HTTP status is already 200 by the time a mid-stream error
+            # happens (headers are flushed on the first yield), so this can't surface
+            # as an HTTP error status — send an SSE error event the frontend can render.
+            logger.exception("Tutor chat stream failed for concept %s", payload.concept_id)
+            yield f"data: {json.dumps({'error': 'The tutor is unavailable right now. Please try again.'})}\n\n"
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(events(), media_type="text/event-stream")
+

@@ -7,8 +7,8 @@ from ..config import get_settings
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 MODELS = {
-    "tutor_fast": "meta-llama/llama-3.3-70b-versatile",
-    "tutor_quality": "anthropic/claude-haiku-4-5",
+    "tutor_fast": "meta-llama/llama-3.3-70b-instruct",
+    "tutor_quality": "anthropic/claude-haiku-4.5",
     "content_gen": "deepseek/deepseek-v4-flash",
     "evaluation": "anthropic/claude-sonnet-5",
     "quiz_gen": "deepseek/deepseek-v4-flash",

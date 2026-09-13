@@ -34,3 +34,21 @@ def test_chat_uses_default_mastery_for_unknown_concept(client):
         json={"concept_id": "unknown-concept", "message": "hi", "conversation_history": []},
     )
     assert response.status_code == 200
+
+
+@respx.mock
+def test_chat_emits_error_event_when_openrouter_fails(client):
+    """A bad model/auth/etc. from OpenRouter surfaces as an SSE error event instead of
+    silently dropping the stream, since the HTTP status is already 200 by the time
+    streaming begins."""
+    respx.post("https://openrouter.ai/api/v1/chat/completions").mock(
+        return_value=httpx.Response(400, json={"error": "invalid model"})
+    )
+
+    response = client.post(
+        "/tutor/chat",
+        json={"concept_id": "why-distributed-systems-exist", "message": "Why does it exist?", "conversation_history": []},
+    )
+    assert response.status_code == 200
+    assert '"error"' in response.text
+    assert response.text.endswith("data: [DONE]\n\n")
