@@ -1,12 +1,15 @@
 name: Deploy GRIND
 
 on:
-  push:
+  workflow_run:
+    workflows: [Test]
     branches: [main]
+    types: [completed]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: appleboy/ssh-action@v1.2.0
         with:
