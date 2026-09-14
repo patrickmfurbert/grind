@@ -14,14 +14,14 @@ SSE_BODY = (
 
 @pytest.fixture(autouse=True)
 def no_book_context(monkeypatch):
-    """Tutor tests exercise OpenRouter streaming, not RAG retrieval; stub retrieve() so
-    they don't depend on a real Qdrant/Ollama instance being reachable."""
+    """Tutor tests exercise OpenRouter streaming, not RAG retrieval; stub retrieve_passages()
+    so they don't depend on a real Qdrant/Ollama instance being reachable."""
     import backend.app.routers.tutor as tutor_module
 
-    async def fake_retrieve(query, limit=4):
-        return ""
+    async def fake_retrieve_passages(query, limit=4):
+        return []
 
-    monkeypatch.setattr(tutor_module, "retrieve", fake_retrieve)
+    monkeypatch.setattr(tutor_module, "retrieve_passages", fake_retrieve_passages)
 
 
 @respx.mock
@@ -71,15 +71,15 @@ def test_chat_emits_error_event_when_openrouter_fails(client):
 
 @respx.mock
 def test_chat_injects_retrieved_book_passages_into_system_prompt(client, monkeypatch):
-    """When retrieve() finds relevant book passages, they should be appended to the
-    system prompt sent to OpenRouter so the tutor can ground its response in them."""
+    """When retrieve_passages() finds relevant book passages, they should be appended to
+    the system prompt sent to OpenRouter so the tutor can ground its response in them."""
     import backend.app.routers.tutor as tutor_module
 
-    async def fake_retrieve(query, limit=4):
+    async def fake_retrieve_passages(query, limit=4):
         assert query == "why-distributed-systems-exist" or query  # called with the concept name
-        return "[Designing Data-Intensive Applications, p. 12]\nReplication trades consistency for availability."
+        return [{"title": "Designing Data-Intensive Applications", "page": 12, "text": "Replication trades consistency for availability."}]
 
-    monkeypatch.setattr(tutor_module, "retrieve", fake_retrieve)
+    monkeypatch.setattr(tutor_module, "retrieve_passages", fake_retrieve_passages)
 
     route = respx.post("https://openrouter.ai/api/v1/chat/completions").mock(
         return_value=httpx.Response(200, content="data: [DONE]\n\n", headers={"content-type": "text/event-stream"})
@@ -95,3 +95,35 @@ def test_chat_injects_retrieved_book_passages_into_system_prompt(client, monkeyp
     system_message = sent_body["messages"][0]["content"]
     assert "Replication trades consistency for availability." in system_message
     assert "Designing Data-Intensive Applications, p. 12" in system_message
+
+
+@respx.mock
+def test_chat_emits_sources_event_when_book_passages_found(client, monkeypatch):
+    """The frontend needs to show citations for what the tutor drew on, so a successful
+    stream should end with a sources SSE event listing the deduplicated book/page pairs."""
+    import backend.app.routers.tutor as tutor_module
+
+    async def fake_retrieve_passages(query, limit=4):
+        return [
+            {"title": "Designing Data-Intensive Applications", "page": 12, "text": "Replication trades consistency for availability."},
+            {"title": "Designing Data-Intensive Applications", "page": 12, "text": "Duplicate page, should be deduplicated."},
+            {"title": "Designing Data-Intensive Applications", "page": 40, "text": "Partitioning spreads load across nodes."},
+        ]
+
+    monkeypatch.setattr(tutor_module, "retrieve_passages", fake_retrieve_passages)
+
+    respx.post("https://openrouter.ai/api/v1/chat/completions").mock(
+        return_value=httpx.Response(200, content="data: [DONE]\n\n", headers={"content-type": "text/event-stream"})
+    )
+
+    response = client.post(
+        "/tutor/chat",
+        json={"concept_id": "why-distributed-systems-exist", "message": "Why does it exist?", "conversation_history": []},
+    )
+    assert response.status_code == 200
+    sources_line = next(line for line in response.text.splitlines() if '"sources"' in line)
+    sources = json.loads(sources_line[len("data: "):])["sources"]
+    assert sources == [
+        {"title": "Designing Data-Intensive Applications", "page": 12},
+        {"title": "Designing Data-Intensive Applications", "page": 40},
+    ]

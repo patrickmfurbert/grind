@@ -56,6 +56,7 @@ export function useTutor(conceptId) {
       setStreaming(true);
       let finalText = "";
       let failed = false;
+      let sources = [];
       try {
         const response = await fetch("/api/tutor/chat", {
           method: "POST",
@@ -76,10 +77,13 @@ export function useTutor(conceptId) {
             const payload = JSON.parse(line.slice(6));
             if (payload.error) {
               text = text ? `${text}\n\n⚠️ ${payload.error}` : `⚠️ ${payload.error}`;
+            } else if (payload.sources) {
+              sources = payload.sources;
+              continue;
             } else {
               text += payload.token;
             }
-            setMessages((items) => [...items.slice(0, -1), { role: "assistant", content: text }]);
+            setMessages((items) => [...items.slice(0, -1), { role: "assistant", content: text, sources }]);
           }
         }
         finalText = text;

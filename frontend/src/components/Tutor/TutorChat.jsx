@@ -21,7 +21,7 @@ function TutorChat({ concept }) {
     <div className="tutor-chat">
       <div className="chat">
         {thread.map((message, index) => (
-          <TutorMessage key={index} role={message.role} content={message.content} />
+          <TutorMessage key={index} role={message.role} content={message.content} sources={message.sources} />
         ))}
       </div>
       <TutorInput onSend={send} disabled={streaming} />

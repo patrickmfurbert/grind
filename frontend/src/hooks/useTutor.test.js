@@ -79,9 +79,34 @@ describe("useTutor", () => {
 
     expect(result.current.messages[0]).toEqual({ role: "user", content: "What is CAP theorem?" });
     await waitFor(() =>
-      expect(result.current.messages[1]).toEqual({ role: "assistant", content: "Why it exists" })
+      expect(result.current.messages[1]).toEqual({ role: "assistant", content: "Why it exists", sources: [] })
     );
     expect(result.current.streaming).toBe(false);
+  });
+
+  it("attaches book citations from the sources SSE event to the assistant reply", async () => {
+    global.fetch = mockFetchRouter({
+      chat: sseResponse([
+        'data: {"token": "CAP stands for..."}\n\n',
+        'data: {"sources": [{"title": "Designing Data-Intensive Applications", "page": 42}]}\n\n',
+        "data: [DONE]\n\n",
+      ]),
+    });
+
+    const { result } = renderHook(() => useTutor("cap-theorem"));
+    await waitFor(() => expect(result.current.loadingHistory).toBe(false));
+
+    await act(async () => {
+      await result.current.send("What is CAP theorem?");
+    });
+
+    await waitFor(() =>
+      expect(result.current.messages[1]).toEqual({
+        role: "assistant",
+        content: "CAP stands for...",
+        sources: [{ title: "Designing Data-Intensive Applications", page: 42 }],
+      })
+    );
   });
 
   it("sends concept_id and prior conversation history in the request body", async () => {

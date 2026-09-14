@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from ..database import connection
 from ..services.openrouter import stream_chat
-from ..services.rag import retrieve
+from ..services.rag import retrieve_passages
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +38,12 @@ async def chat(payload: ChatRequest):
     # Retrieve on the concept name rather than the student's raw answer: it stays a
     # consistent, on-topic query regardless of how the student phrases their response,
     # so the tutor reliably grounds itself in the right book passages every turn.
-    passages = await retrieve(name)
-    book_context = BOOK_CONTEXT_TEMPLATE.format(passages=passages) if passages else ""
+    book_passages = await retrieve_passages(name)
+    passages_text = "\n\n".join(f"[{passage['title']}, p. {passage['page']}]\n{passage['text']}" for passage in book_passages)
+    book_context = BOOK_CONTEXT_TEMPLATE.format(passages=passages_text) if book_passages else ""
+    # Deduplicate by (title, page) — the top-4 chunks can include more than one chunk
+    # from the same page, but the citation UI only needs to show each source once.
+    sources = list({(passage["title"], passage["page"]): {"title": passage["title"], "page": passage["page"]} for passage in book_passages}.values())
 
     messages = [{"role": "system", "content": PROMPT.format(concept=name, mastery=mastery, book_context=book_context)}, *payload.conversation_history, {"role": "user", "content": payload.message}]
 
@@ -47,6 +51,8 @@ async def chat(payload: ChatRequest):
         try:
             async for token in stream_chat(messages):
                 yield f"data: {json.dumps({'token': token})}\n\n"
+            if sources:
+                yield f"data: {json.dumps({'sources': sources})}\n\n"
         except Exception:
             # The stream's HTTP status is already 200 by the time a mid-stream error
             # happens (headers are flushed on the first yield), so this can't surface

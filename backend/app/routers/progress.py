@@ -32,3 +32,14 @@ def update_mastery(payload: MasteryUpdate):
     with connection() as conn:
         conn.execute("UPDATE concepts SET mastery_level=?, last_studied=CURRENT_TIMESTAMP WHERE id=?", (payload.mastery_level, payload.concept_id))
     return {"updated": True}
+
+
+def apply_mastery_delta(conn, concept_id: str, correct: bool) -> int:
+    """Nudges a concept's mastery_level by +1 (capped at 5) on a correct/passing quiz
+    answer, or -1 (floored at 0) otherwise. Used by quiz submission so mastery is
+    quiz-driven rather than self-reported. Returns the new mastery_level."""
+    row = conn.execute("SELECT mastery_level FROM concepts WHERE id=?", (concept_id,)).fetchone()
+    current = row["mastery_level"] if row else 0
+    updated = min(5, current + 1) if correct else max(0, current - 1)
+    conn.execute("UPDATE concepts SET mastery_level=?, last_studied=CURRENT_TIMESTAMP WHERE id=?", (updated, concept_id))
+    return updated

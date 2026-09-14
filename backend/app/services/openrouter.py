@@ -31,3 +31,22 @@ async def stream_chat(messages: list[dict[str, str]], model_key: str = "tutor_fa
                 content = data["choices"][0].get("delta", {}).get("content")
                 if content:
                     yield content
+
+
+async def complete_json(messages: list[dict[str, str]], model_key: str = "quiz_gen") -> dict:
+    """Single non-streaming completion that asks the model for a strict JSON object back
+    (quiz generation and free-response grading both need structured output, not tokens)."""
+    key = get_settings().openrouter_api_key
+    if not key:
+        raise RuntimeError("OPENROUTER_API_KEY is not configured")
+    payload = {
+        "model": MODELS[model_key],
+        "messages": messages,
+        "response_format": {"type": "json_object"},
+    }
+    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    async with httpx.AsyncClient(timeout=60) as client:
+        response = await client.post(f"{OPENROUTER_BASE_URL}/chat/completions", headers=headers, json=payload)
+        response.raise_for_status()
+        content = response.json()["choices"][0]["message"]["content"]
+    return json.loads(content)

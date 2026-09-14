@@ -1,25 +1,33 @@
 import { useState } from "react";
 
-/** A single quiz question with a free-response answer and a 0-5 self-assessed score for SM-2. */
+/** A single quiz question: multiple_choice renders as radio options (instantly graded),
+ * free_response renders as a textarea (graded by the evaluation LLM on submit). */
 function QuizCard({ question, onSubmit }) {
   const [answer, setAnswer] = useState("");
-  const [score, setScore] = useState(3);
+  const isMultipleChoice = question.type === "multiple_choice";
 
   function submit(event) {
     event.preventDefault();
-    onSubmit(question.id, answer, question.type, score);
+    if (!answer) return;
+    onSubmit(question.id, answer);
   }
 
   return (
     <form className="quiz-card" onSubmit={submit}>
       <p className="prompt">{question.prompt}</p>
-      <textarea value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="Your answer..." rows={4} />
-      <label>
-        Confidence
-        <input type="range" min={0} max={5} value={score} onChange={(event) => setScore(Number(event.target.value))} />
-        <span>{score}/5</span>
-      </label>
-      <button>Submit</button>
+      {isMultipleChoice ? (
+        <div className="quiz-options">
+          {question.options.map((option) => (
+            <label key={option} className={answer === option ? "selected" : ""}>
+              <input type="radio" name={question.id} value={option} checked={answer === option} onChange={(event) => setAnswer(event.target.value)} />
+              {option}
+            </label>
+          ))}
+        </div>
+      ) : (
+        <textarea value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="Your answer..." rows={4} />
+      )}
+      <button disabled={!answer}>Submit</button>
     </form>
   );
 }

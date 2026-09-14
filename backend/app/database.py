@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS concepts (
 );
 CREATE TABLE IF NOT EXISTS quiz_results (
  id INTEGER PRIMARY KEY AUTOINCREMENT, concept_id TEXT NOT NULL, quiz_type TEXT NOT NULL,
- question_id TEXT NOT NULL, answer TEXT, correct BOOLEAN, score INTEGER,
+ question_id TEXT NOT NULL, question_type TEXT, answer TEXT, correct BOOLEAN, score INTEGER,
  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(concept_id) REFERENCES concepts(id)
 );
 CREATE TABLE IF NOT EXISTS spaced_repetition (
@@ -35,6 +35,11 @@ CREATE TABLE IF NOT EXISTS conversation_messages (
  role TEXT NOT NULL, content TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
  FOREIGN KEY (concept_id) REFERENCES concepts(id)
 );
+CREATE TABLE IF NOT EXISTS quiz_questions (
+ id TEXT PRIMARY KEY, concept_id TEXT NOT NULL, quiz_type TEXT NOT NULL, question_type TEXT NOT NULL,
+ prompt TEXT NOT NULL, options TEXT, correct_answer TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ FOREIGN KEY (concept_id) REFERENCES concepts(id)
+);
 """
 
 
@@ -44,6 +49,15 @@ def _migrate_sessions_table(conn) -> None:
     columns = {row["name"] for row in conn.execute("PRAGMA table_info(sessions)")}
     if "session_id" not in columns:
         conn.execute("ALTER TABLE sessions ADD COLUMN session_id TEXT")
+
+
+def _migrate_quiz_results_table(conn) -> None:
+    """quiz_results predates question_type (added when quiz generation started producing
+    both multiple_choice and free_response questions); existing databases need the
+    column added explicitly."""
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(quiz_results)")}
+    if "question_type" not in columns:
+        conn.execute("ALTER TABLE quiz_results ADD COLUMN question_type TEXT")
 
 
 @contextmanager
@@ -63,6 +77,7 @@ def initialize_database(curriculum: list[dict]) -> None:
     with connection() as conn:
         conn.executescript(SCHEMA)
         _migrate_sessions_table(conn)
+        _migrate_quiz_results_table(conn)
         conn.executemany(
             """INSERT OR IGNORE INTO concepts(id, phase, title, description, prerequisites)
                VALUES (:id, :phase, :title, :description, :prerequisites)""",

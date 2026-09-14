@@ -68,7 +68,13 @@ h1 { font-family: var(--mono); font-weight: 800; font-size: clamp(1.75rem, 6vw, 
 .chat { flex: 1; min-height: 0; overflow-y: auto; display: grid; align-content: start; gap: .75rem; margin: 1.5rem 0; }
 .message { padding: .8rem 1rem; border-radius: .8rem; line-height: 1.5; white-space: pre-wrap; }
 .message.assistant { background: var(--panel); border: 1px solid var(--border-soft); }
+.message.assistant p:first-child { margin-top: 0; }
+.message.assistant p:last-child { margin-bottom: 0; }
+.message.assistant pre { background: var(--panel-alt); border: 1px solid var(--border-soft); border-radius: .5rem; padding: .75rem; overflow-x: auto; }
+.message.assistant code { font-family: var(--mono); font-size: .85em; }
+.message.assistant :not(pre) > code { background: var(--panel-alt); padding: .1rem .3rem; border-radius: .3rem; }
 .message.user { background: #155e75; margin-left: 12%; }
+.message-sources { list-style: none; margin: .6rem 0 0; padding: 0; display: grid; gap: .3rem; font-size: .75rem; color: #9ca3af; }
 .tutor-chat form { display: flex; gap: .6rem; padding: .75rem 0; background: var(--bg); flex-shrink: 0; }
 .tutor-chat input { flex: 1; min-width: 0; padding: .8rem; border: 1px solid var(--border-soft); border-radius: .5rem; color: inherit; background: var(--panel); }
 .tutor-chat form button { border: 0; padding: .8rem 1rem; border-radius: .5rem; color: #082f49; font-weight: bold; background: var(--accent); }
@@ -84,7 +90,12 @@ h1 { font-family: var(--mono); font-weight: 800; font-size: clamp(1.75rem, 6vw, 
 .quiz-card { display: grid; gap: .75rem; background: var(--panel); border: 1px solid var(--border-soft); padding: 1rem; border-radius: .8rem; margin-bottom: 1rem; }
 .quiz-card textarea { width: 100%; padding: .7rem; border-radius: .5rem; border: 1px solid var(--border-soft); background: var(--bg); color: inherit; }
 .quiz-card label { display: flex; align-items: center; gap: .5rem; color: #9ca3af; font-size: .85rem; }
+.quiz-options { display: grid; gap: .5rem; }
+.quiz-options label { padding: .6rem .8rem; border: 1px solid var(--border-soft); border-radius: .5rem; background: var(--panel-alt); color: #e5e7eb; cursor: pointer; }
+.quiz-options label.selected { border-color: var(--accent-strong); background: rgba(34, 211, 238, .08); }
+.quiz-options input { margin-right: .5rem; }
 .quiz-card button { align-self: start; border: 0; padding: .6rem 1.2rem; border-radius: .5rem; background: var(--accent); color: #082f49; font-weight: bold; }
+.quiz-card button:disabled { background: var(--border-soft); color: #9ca3af; cursor: not-allowed; }
 .quiz-result { padding: .8rem 1rem; border-radius: .65rem; margin-bottom: 1.5rem; }
 .quiz-result.correct { background: #064e3b; }
 .quiz-result.incorrect { background: #7f1d1d; }

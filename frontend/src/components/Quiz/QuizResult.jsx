@@ -5,7 +5,9 @@ function QuizResult({ result }) {
     <div className={`quiz-result ${result.correct ? "correct" : "incorrect"}`}>
       <strong>{result.correct ? "On track" : "Review needed"}</strong>
       <p>{result.explanation}</p>
-      <small>Next review: {new Date(result.next_review_date).toLocaleDateString()}</small>
+      <small>
+        Score: {result.score}/5 · Mastery: {result.mastery_level}/5 · Next review: {new Date(result.next_review_date).toLocaleDateString()}
+      </small>
     </div>
   );
 }
