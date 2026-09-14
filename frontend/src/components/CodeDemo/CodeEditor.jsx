@@ -11,6 +11,24 @@ const TEMPLATES = {
 
 const LANGUAGES = Object.keys(TEMPLATES);
 
+/** Custom Monaco theme so the editor matches the app's near-black terminal palette instead of
+ * the default vs-dark blue-grey. */
+function defineGrindTheme(monaco) {
+  monaco.editor.defineTheme("grind-dark", {
+    base: "vs-dark",
+    inherit: true,
+    rules: [],
+    colors: {
+      "editor.background": "#0a0e13",
+      "editor.lineHighlightBackground": "#111827",
+      "editorGutter.background": "#0a0e13",
+      "editorLineNumber.foreground": "#3b4657",
+      "editorLineNumber.activeForeground": "#67e8f9",
+      "editorCursor.foreground": "#67e8f9",
+    },
+  });
+}
+
 /** Monaco-based mini code demo editor: pick a language, run it against the backend sandbox, see output. */
 function CodeEditor({ initialLanguage = "python", initialCode }) {
   const [language, setLanguage] = useState(initialLanguage);
@@ -51,14 +69,17 @@ function CodeEditor({ initialLanguage = "python", initialCode }) {
           {running ? "Running…" : "Run"}
         </button>
       </div>
-      <Editor
-        height="40vh"
-        language={language === "bash" ? "shell" : language}
-        theme="vs-dark"
-        value={code}
-        onChange={(value) => setCode(value ?? "")}
-        options={{ minimap: { enabled: false }, fontSize: 14 }}
-      />
+      <div className="code-editor-frame">
+        <Editor
+          height="40vh"
+          language={language === "bash" ? "shell" : language}
+          theme="grind-dark"
+          beforeMount={defineGrindTheme}
+          value={code}
+          onChange={(value) => setCode(value ?? "")}
+          options={{ minimap: { enabled: false }, fontSize: 14 }}
+        />
+      </div>
       <CodeOutput result={result} />
     </div>
   );
