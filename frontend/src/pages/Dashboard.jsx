@@ -25,7 +25,7 @@ function Dashboard() {
     <section className="dashboard">
       <header>
         <p className="eyebrow">GRIND</p>
-        <h1>Dashboard</h1>
+        <h1>Map</h1>
         <p>Distributed systems, AI, and system design through deliberate practice.</p>
       </header>
       <PhaseProgress summary={summary} />

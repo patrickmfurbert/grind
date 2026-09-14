@@ -12,8 +12,8 @@ h1 { font-size: clamp(2rem, 7vw, 4rem); line-height: 1; margin: .25rem 0 1rem; }
 .eyebrow { color: #22d3ee; font-weight: 700; letter-spacing: .16em; font-size: .75rem; text-transform: uppercase; }
 .empty { color: #64748b; }
 
-.dashboard, .study, .quiz, .code-lab, .library { max-width: 960px; margin: auto; padding: 1.5rem; }
-.study, .quiz { max-width: 700px; }
+.dashboard, .study, .quiz, .code-lab, .library { max-width: 1200px; margin: auto; padding: 1.5rem; }
+.study, .quiz { max-width: 860px; }
 .study { display: flex; flex-direction: column; min-height: calc(100dvh - 3.5rem); }
 .no-concept { padding: 1rem; }
 .no-concept .back { display: inline-block; border: 0; padding: 0; margin-top: 1.5rem; color: #67e8f9; background: transparent; text-decoration: none; }
