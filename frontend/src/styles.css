@@ -40,6 +40,8 @@ h1 { font-size: clamp(2rem, 7vw, 4rem); line-height: 1; margin: .25rem 0 1rem; }
 .tutor-chat form { display: flex; gap: .6rem; position: sticky; bottom: 4.5rem; padding: 1rem 0; background: #0b1120; }
 .tutor-chat input { flex: 1; min-width: 0; padding: .8rem; border: 1px solid #334155; border-radius: .5rem; color: inherit; background: #172033; }
 .tutor-chat form button { border: 0; padding: .8rem 1rem; border-radius: .5rem; color: #082f49; font-weight: bold; background: #67e8f9; }
+.tutor-loading { color: #9ca3af; padding: 2rem 0; text-align: center; }
+.tutor-chat .start-fresh { display: block; margin: .5rem auto 0; }
 .study-nav { display: flex; gap: .6rem; margin-bottom: 1rem; }
 .study-nav button { border: 1px solid #334155; background: #172033; color: #e5e7eb; padding: .5rem 1rem; border-radius: .5rem; }
 

@@ -1,5 +1,7 @@
 import json
 import logging
+from typing import Literal
+from uuid import uuid4
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
@@ -54,4 +56,62 @@ async def chat(payload: ChatRequest):
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(events(), media_type="text/event-stream")
+
+
+class MessagePayload(BaseModel):
+    concept_id: str
+    session_id: str
+    role: Literal["user", "assistant"]
+    content: str
+
+
+def _latest_session_id(conn, concept_id: str) -> str | None:
+    row = conn.execute(
+        "SELECT session_id FROM sessions WHERE concept_id=? AND session_id IS NOT NULL ORDER BY started_at DESC, id DESC LIMIT 1",
+        (concept_id,),
+    ).fetchone()
+    return row["session_id"] if row else None
+
+
+@router.get("/history/{concept_id}")
+def get_history(concept_id: str):
+    """Returns the most recent study session's full conversation for a concept, so the
+    Study page can restore it after a navigation/unmount. If the concept has no prior
+    session, a new one is started (and stored in `sessions`) so subsequent POST
+    /tutor/message calls have a session_id to attach to."""
+    with connection() as conn:
+        session_id = _latest_session_id(conn, concept_id)
+        if session_id is None:
+            session_id = str(uuid4())
+            conn.execute("INSERT INTO sessions (session_id, concept_id) VALUES (?, ?)", (session_id, concept_id))
+            return {"session_id": session_id, "messages": []}
+        rows = conn.execute(
+            "SELECT role, content FROM conversation_messages WHERE concept_id=? AND session_id=? ORDER BY id",
+            (concept_id, session_id),
+        ).fetchall()
+    return {"session_id": session_id, "messages": [dict(row) for row in rows]}
+
+
+@router.post("/message")
+def save_message(payload: MessagePayload):
+    """Persists a single chat turn (called by the frontend right after a user message is
+    sent, and again once the assistant's streamed reply finishes) so the conversation
+    survives navigating away from the Study page."""
+    with connection() as conn:
+        conn.execute(
+            "INSERT INTO conversation_messages (concept_id, session_id, role, content) VALUES (?, ?, ?, ?)",
+            (payload.concept_id, payload.session_id, payload.role, payload.content),
+        )
+    return {"saved": True}
+
+
+@router.delete("/history/{concept_id}")
+def clear_history(concept_id: str):
+    """Clears all saved conversation turns and sessions for a concept, so Pat can
+    restart it from scratch; the next GET /tutor/history call will start a fresh
+    session_id since none remain."""
+    with connection() as conn:
+        conn.execute("DELETE FROM conversation_messages WHERE concept_id=?", (concept_id,))
+        conn.execute("DELETE FROM sessions WHERE concept_id=?", (concept_id,))
+    return {"cleared": True}
 

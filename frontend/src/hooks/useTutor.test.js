@@ -25,21 +25,53 @@ function sseResponse(chunks, options = {}) {
   };
 }
 
+function historyResponse(sessionId, messages = []) {
+  return { ok: true, json: async () => ({ session_id: sessionId, messages }) };
+}
+
+/** Routes fetch calls by URL/method so history/message persistence calls (fired
+ * automatically on mount and after every turn) don't need to be mocked individually
+ * in every test — only the interesting ones are asserted on directly. */
+function mockFetchRouter({ history = historyResponse("session-1"), chat = sseResponse(["data: [DONE]\n\n"]) } = {}) {
+  return vi.fn(async (url, options = {}) => {
+    if (typeof url === "string" && url.includes("/tutor/history/")) {
+      if (options.method === "DELETE") return { ok: true, json: async () => ({ cleared: true }) };
+      return history;
+    }
+    if (typeof url === "string" && url.includes("/tutor/message")) {
+      return { ok: true, json: async () => ({ saved: true }) };
+    }
+    return chat;
+  });
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
 describe("useTutor", () => {
-  it("appends the user message immediately and streams tokens into the assistant reply", async () => {
-    global.fetch = vi.fn().mockResolvedValue(
-      sseResponse([
-        'data: {"token": "Why"}\n\n',
-        'data: {"token": " it exists"}\n\n',
-        "data: [DONE]\n\n",
-      ])
-    );
+  it("restores prior conversation history on mount and stops loading", async () => {
+    global.fetch = mockFetchRouter({
+      history: historyResponse("session-1", [{ role: "user", content: "hi" }, { role: "assistant", content: "hello" }]),
+    });
 
     const { result } = renderHook(() => useTutor("cap-theorem"));
+
+    expect(result.current.loadingHistory).toBe(true);
+    await waitFor(() => expect(result.current.loadingHistory).toBe(false));
+    expect(result.current.messages).toEqual([
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "hello" },
+    ]);
+  });
+
+  it("appends the user message immediately and streams tokens into the assistant reply", async () => {
+    global.fetch = mockFetchRouter({
+      chat: sseResponse(['data: {"token": "Why"}\n\n', 'data: {"token": " it exists"}\n\n', "data: [DONE]\n\n"]),
+    });
+
+    const { result } = renderHook(() => useTutor("cap-theorem"));
+    await waitFor(() => expect(result.current.loadingHistory).toBe(false));
 
     await act(async () => {
       await result.current.send("What is CAP theorem?");
@@ -53,30 +85,54 @@ describe("useTutor", () => {
   });
 
   it("sends concept_id and prior conversation history in the request body", async () => {
-    global.fetch = vi.fn().mockResolvedValue(sseResponse(["data: [DONE]\n\n"]));
+    global.fetch = mockFetchRouter();
 
     const { result } = renderHook(() => useTutor("cap-theorem"));
+    await waitFor(() => expect(result.current.loadingHistory).toBe(false));
     await act(async () => {
       await result.current.send("hello");
     });
 
-    const [, options] = global.fetch.mock.calls[0];
-    const body = JSON.parse(options.body);
+    const chatCall = global.fetch.mock.calls.find(([url]) => typeof url === "string" && url.includes("/tutor/chat"));
+    const body = JSON.parse(chatCall[1].body);
     expect(body.concept_id).toBe("cap-theorem");
     expect(body.message).toBe("hello");
     expect(body.conversation_history).toEqual([]);
   });
 
+  it("persists both the user message and the assistant reply after a turn completes", async () => {
+    global.fetch = mockFetchRouter({
+      history: historyResponse("session-42"),
+      chat: sseResponse(['data: {"token": "answer"}\n\n', "data: [DONE]\n\n"]),
+    });
+
+    const { result } = renderHook(() => useTutor("cap-theorem"));
+    await waitFor(() => expect(result.current.loadingHistory).toBe(false));
+    await act(async () => {
+      await result.current.send("hello");
+    });
+
+    await waitFor(() => {
+      const saveCalls = global.fetch.mock.calls.filter(([url]) => typeof url === "string" && url.includes("/tutor/message"));
+      expect(saveCalls).toHaveLength(2);
+    });
+    const saveCalls = global.fetch.mock.calls.filter(([url]) => typeof url === "string" && url.includes("/tutor/message"));
+    const [userSave, assistantSave] = saveCalls.map(([, options]) => JSON.parse(options.body));
+    expect(userSave).toMatchObject({ concept_id: "cap-theorem", session_id: "session-42", role: "user", content: "hello" });
+    expect(assistantSave).toMatchObject({ concept_id: "cap-theorem", session_id: "session-42", role: "assistant", content: "answer" });
+  });
+
   it("renders a mid-stream error event as a warning in the assistant reply", async () => {
-    global.fetch = vi.fn().mockResolvedValue(
-      sseResponse([
+    global.fetch = mockFetchRouter({
+      chat: sseResponse([
         'data: {"token": "Let\'s "}\n\n',
         'data: {"error": "The tutor is unavailable right now. Please try again."}\n\n',
         "data: [DONE]\n\n",
-      ])
-    );
+      ]),
+    });
 
     const { result } = renderHook(() => useTutor("cap-theorem"));
+    await waitFor(() => expect(result.current.loadingHistory).toBe(false));
     await act(async () => {
       await result.current.send("hello");
     });
@@ -87,14 +143,40 @@ describe("useTutor", () => {
   });
 
   it("renders an error when the request itself fails", async () => {
-    global.fetch = vi.fn().mockResolvedValue(sseResponse([], { ok: false, status: 500 }));
+    global.fetch = mockFetchRouter({ chat: sseResponse([], { ok: false, status: 500 }) });
 
     const { result } = renderHook(() => useTutor("cap-theorem"));
+    await waitFor(() => expect(result.current.loadingHistory).toBe(false));
     await act(async () => {
       await result.current.send("hello");
     });
 
     expect(result.current.messages[1].content).toContain("⚠️");
     expect(result.current.streaming).toBe(false);
+  });
+
+  it("clearHistory deletes and reloads a fresh (empty) session", async () => {
+    let historyCallCount = 0;
+    global.fetch = vi.fn(async (url, options = {}) => {
+      if (typeof url === "string" && url.includes("/tutor/history/")) {
+        if (options.method === "DELETE") return { ok: true, json: async () => ({ cleared: true }) };
+        historyCallCount += 1;
+        return historyCallCount === 1
+          ? historyResponse("session-1", [{ role: "user", content: "old message" }])
+          : historyResponse("session-2", []);
+      }
+      return { ok: true, json: async () => ({ saved: true }) };
+    });
+
+    const { result } = renderHook(() => useTutor("cap-theorem"));
+    await waitFor(() => expect(result.current.messages).toEqual([{ role: "user", content: "old message" }]));
+
+    await act(async () => {
+      await result.current.clearHistory();
+    });
+
+    expect(result.current.messages).toEqual([]);
+    const deleteCall = global.fetch.mock.calls.find(([, options]) => options?.method === "DELETE");
+    expect(deleteCall[0]).toContain("/tutor/history/cap-theorem");
   });
 });

@@ -26,11 +26,24 @@ CREATE TABLE IF NOT EXISTS books (
  processing_status TEXT DEFAULT 'pending'
 );
 CREATE TABLE IF NOT EXISTS sessions (
- id INTEGER PRIMARY KEY AUTOINCREMENT, concept_id TEXT NOT NULL, started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT UNIQUE, concept_id TEXT NOT NULL, started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
  ended_at TIMESTAMP, duration_seconds INTEGER, mastery_before INTEGER, mastery_after INTEGER,
  FOREIGN KEY(concept_id) REFERENCES concepts(id)
 );
+CREATE TABLE IF NOT EXISTS conversation_messages (
+ id INTEGER PRIMARY KEY AUTOINCREMENT, concept_id TEXT NOT NULL, session_id TEXT NOT NULL,
+ role TEXT NOT NULL, content TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ FOREIGN KEY (concept_id) REFERENCES concepts(id)
+);
 """
+
+
+def _migrate_sessions_table(conn) -> None:
+    """sessions predates session_id (added to persist tutor chat history across visits);
+    CREATE TABLE IF NOT EXISTS won't add the column to a database that already exists."""
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(sessions)")}
+    if "session_id" not in columns:
+        conn.execute("ALTER TABLE sessions ADD COLUMN session_id TEXT")
 
 
 @contextmanager
@@ -49,6 +62,7 @@ def connection():
 def initialize_database(curriculum: list[dict]) -> None:
     with connection() as conn:
         conn.executescript(SCHEMA)
+        _migrate_sessions_table(conn)
         conn.executemany(
             """INSERT OR IGNORE INTO concepts(id, phase, title, description, prerequisites)
                VALUES (:id, :phase, :title, :description, :prerequisites)""",
