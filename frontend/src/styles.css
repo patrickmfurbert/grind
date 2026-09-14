@@ -16,7 +16,8 @@
   background: var(--bg);
 }
 * { box-sizing: border-box; }
-body { margin: 0; }
+body { margin: 0; overflow-x: hidden; }
+html { overflow-x: hidden; }
 ::selection { background: var(--accent-strong); color: #05070a; }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
@@ -106,12 +107,15 @@ h1 { font-family: var(--mono); font-weight: 800; font-size: clamp(1.75rem, 6vw, 
 .dropzone { display: block; text-align: center; padding: 2rem; border: 2px dashed var(--border-soft); border-radius: .8rem; color: #9ca3af; }
 .upload-zone.dragging .dropzone { border-color: var(--accent); color: var(--accent); }
 .staged-file { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: .75rem 1rem; border: 1px solid var(--border-soft); border-radius: .8rem; background: var(--panel); margin: 0; }
+.staged-file-name { min-width: 0; overflow-wrap: anywhere; }
+.staged-file .link-button { flex-shrink: 0; }
 .link-button { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; font-size: .85rem; }
 .upload-zone > button[type="button"]:not(.link-button) { padding: .7rem; border-radius: .5rem; border: 0; background: var(--accent-strong); color: var(--bg); font-weight: 700; cursor: pointer; }
 .upload-zone > button[type="button"]:not(.link-button):disabled { background: var(--border-soft); color: #9ca3af; cursor: not-allowed; }
 .upload-error { color: #f87171; font-size: .85rem; margin: 0; }
 .book-library { list-style: none; padding: 0; display: grid; gap: .5rem; }
-.book-library li { display: flex; gap: .75rem; align-items: center; background: var(--panel); border: 1px solid var(--border-soft); padding: .7rem 1rem; border-radius: .5rem; }
+.book-library li { display: flex; flex-wrap: wrap; gap: .5rem .75rem; align-items: center; background: var(--panel); border: 1px solid var(--border-soft); padding: .7rem 1rem; border-radius: .5rem; }
+.book-library li strong { min-width: 0; overflow-wrap: anywhere; }
 .book-library .status { font-family: var(--mono); font-size: .7rem; text-transform: uppercase; padding: .15rem .5rem; border-radius: 999px; background: var(--border-soft); }
 .book-library .status.ready { background: #064e3b; }
 .book-library .status.failed { background: #7f1d1d; }

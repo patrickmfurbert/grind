@@ -70,7 +70,7 @@ function UploadZone({ onUploaded }) {
     >
       {file ? (
         <p className="staged-file">
-          📄 {file.name}
+          <span className="staged-file-name">📄 {file.name}</span>
           <button type="button" className="link-button" onClick={clear} disabled={busy}>
             change
           </button>
