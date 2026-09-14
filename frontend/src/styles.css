@@ -5,7 +5,7 @@
 :root { font-family: Inter, ui-sans-serif, system-ui; color: #e5e7eb; background: #0b1120; }
 * { box-sizing: border-box; }
 body { margin: 0; }
-main { min-height: 100vh; padding-bottom: 4.5rem; }
+main { min-height: 100vh; padding-top: 3.5rem; }
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
 h1 { font-size: clamp(2rem, 7vw, 4rem); line-height: 1; margin: .25rem 0 1rem; }
@@ -14,9 +14,9 @@ h1 { font-size: clamp(2rem, 7vw, 4rem); line-height: 1; margin: .25rem 0 1rem; }
 
 .dashboard, .study, .quiz, .code-lab, .library { max-width: 960px; margin: auto; padding: 1.5rem; }
 .study, .quiz { max-width: 700px; }
-.back { display: inline-block; border: 0; padding: 0; margin-bottom: 1rem; color: #67e8f9; background: transparent; text-decoration: none; }
+.study { display: flex; flex-direction: column; min-height: calc(100dvh - 3.5rem); }
 .no-concept { padding: 1rem; }
-.no-concept .back { margin-top: 1.5rem; }
+.no-concept .back { display: inline-block; border: 0; padding: 0; margin-top: 1.5rem; color: #67e8f9; background: transparent; text-decoration: none; }
 
 /* Concept map */
 .map { height: 65vh; min-height: 480px; margin-top: 1.5rem; border: 1px solid #26334a; border-radius: 1rem; overflow: hidden; background: #111827; }
@@ -33,11 +33,12 @@ h1 { font-size: clamp(2rem, 7vw, 4rem); line-height: 1; margin: .25rem 0 1rem; }
 .phase-progress .stat span { font-size: .7rem; color: #9ca3af; text-transform: uppercase; }
 
 /* Tutor chat */
-.chat { display: grid; gap: .75rem; min-height: 42vh; margin: 1.5rem 0; }
+.tutor-chat { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.chat { flex: 1; min-height: 0; overflow-y: auto; display: grid; align-content: start; gap: .75rem; margin: 1.5rem 0; }
 .message { padding: .8rem 1rem; border-radius: .8rem; line-height: 1.5; white-space: pre-wrap; }
 .message.assistant { background: #172033; }
 .message.user { background: #155e75; margin-left: 12%; }
-.tutor-chat form { display: flex; gap: .6rem; position: sticky; bottom: 4.5rem; padding: 1rem 0; background: #0b1120; }
+.tutor-chat form { display: flex; gap: .6rem; padding: .75rem 0; background: #0b1120; flex-shrink: 0; }
 .tutor-chat input { flex: 1; min-width: 0; padding: .8rem; border: 1px solid #334155; border-radius: .5rem; color: inherit; background: #172033; }
 .tutor-chat form button { border: 0; padding: .8rem 1rem; border-radius: .5rem; color: #082f49; font-weight: bold; background: #67e8f9; }
 .tutor-loading { color: #9ca3af; padding: 2rem 0; text-align: center; }
@@ -85,7 +86,8 @@ h1 { font-size: clamp(2rem, 7vw, 4rem); line-height: 1; margin: .25rem 0 1rem; }
 .book-library .status.failed { background: #7f1d1d; }
 .book-library small { color: #9ca3af; margin-left: auto; }
 
-/* Tab bar */
-.tab-bar { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: #111827; border-top: 1px solid #26334a; }
-.tab-bar a { flex: 1; text-align: center; padding: .8rem 0; color: #9ca3af; text-decoration: none; font-size: .85rem; }
-.tab-bar a:hover { color: #67e8f9; }
+/* Top nav */
+.top-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 10; display: flex; background: #111827; border-bottom: 1px solid #26334a; }
+.top-nav a { flex: 1; text-align: center; padding: .8rem 0; color: #9ca3af; text-decoration: none; font-size: .85rem; }
+.top-nav a:hover { color: #67e8f9; }
+.top-nav a.active { color: #67e8f9; font-weight: 700; }

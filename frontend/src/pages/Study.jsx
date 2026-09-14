@@ -12,9 +12,6 @@ function Study() {
 
   return (
     <section className="study">
-      <button className="back" onClick={() => navigate("/")}>
-        ← Map
-      </button>
       <p className="eyebrow">{activeConcept.phase}</p>
       <h1>{activeConcept.title}</h1>
       <p>{activeConcept.description}</p>
