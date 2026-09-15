@@ -23,7 +23,7 @@ html { overflow-x: hidden; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border-soft); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-strong); }
-main { min-height: 100vh; padding-top: 3.5rem; }
+main { min-height: 100dvh; padding-top: 3.5rem; }
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
 .tutor-chat form button,
