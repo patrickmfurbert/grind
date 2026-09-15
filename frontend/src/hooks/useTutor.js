@@ -47,7 +47,7 @@ export function useTutor(conceptId) {
   );
 
   const send = useCallback(
-    async (message) => {
+    async (message, mode = "learn") => {
       // Always sent as the full restored history (state was seeded from GET
       // /tutor/history on mount), so the tutor keeps context across visits.
       const history = messages.map(({ role, content }) => ({ role, content }));
@@ -61,7 +61,7 @@ export function useTutor(conceptId) {
         const response = await fetch("/api/tutor/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ concept_id: conceptId, message, conversation_history: history }),
+          body: JSON.stringify({ concept_id: conceptId, message, conversation_history: history, mode }),
         });
         if (!response.ok) {
           throw new Error(`Tutor request failed (${response.status})`);

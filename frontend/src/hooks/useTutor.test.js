@@ -125,6 +125,25 @@ describe("useTutor", () => {
     expect(body.conversation_history).toEqual([]);
   });
 
+  it("defaults to learn mode, and sends teach_back mode when passed to send", async () => {
+    global.fetch = mockFetchRouter();
+
+    const { result } = renderHook(() => useTutor("cap-theorem"));
+    await waitFor(() => expect(result.current.loadingHistory).toBe(false));
+    await act(async () => {
+      await result.current.send("hello");
+    });
+    let chatCall = global.fetch.mock.calls.find(([url]) => typeof url === "string" && url.includes("/tutor/chat"));
+    expect(JSON.parse(chatCall[1].body).mode).toBe("learn");
+
+    global.fetch.mockClear();
+    await act(async () => {
+      await result.current.send("teach me this", "teach_back");
+    });
+    chatCall = global.fetch.mock.calls.find(([url]) => typeof url === "string" && url.includes("/tutor/chat"));
+    expect(JSON.parse(chatCall[1].body).mode).toBe("teach_back");
+  });
+
   it("persists both the user message and the assistant reply after a turn completes", async () => {
     global.fetch = mockFetchRouter({
       history: historyResponse("session-42"),

@@ -39,6 +39,12 @@ Respond with ONLY a JSON object of this exact shape, no other text:
 
 "type" must be either "multiple_choice" or "free_response". "options" is required (and must include "correct_answer" verbatim as one of the entries) for multiple_choice, and omitted for free_response."""
 
+# Interleaved questions are a single, quick recognition check on a *different*, weaker
+# concept mixed into the current quiz — interleaving forces discrimination between
+# concepts instead of blocked, single-topic practice, which research shows improves
+# long-term retention over blocked practice alone.
+INTERLEAVE_GUIDANCE = "Write exactly 1 multiple_choice question that tests recognition of a core fact about this concept. Distractors should reflect plausible misconceptions."
+
 GRADE_PROMPT = """You are grading a learner's free-response answer for a spaced-repetition quiz.
 
 Concept: {concept}
@@ -46,28 +52,86 @@ Question: {prompt}
 Model answer: {correct_answer}
 Learner's answer: {answer}
 
-Score the learner's answer from 0-5 (5 = fully correct and well-reasoned, 3 = partially correct, 0 = incorrect or blank), and give one or two sentences of specific feedback on what's missing or wrong.
+Score the learner's answer from 0-5 (5 = fully correct and well-reasoned, 3 = partially correct, 0 = incorrect or blank). Give one or two sentences of feedback explaining the score. Then separately name the single most important specific idea, trade-off, or detail the learner is missing or got wrong — or null if their answer was already fully correct.
 
 Respond with ONLY a JSON object of this exact shape, no other text:
-{{"score": 0, "explanation": "..."}}"""
+{{"score": 0, "explanation": "...", "gap": "..." }}
+
+"gap" must be null when the answer was fully correct."""
+
+HINT_PROMPT = """You are giving a scaffolded hint for a spaced-repetition quiz question. Do NOT reveal the answer or state it outright — nudge the learner's thinking with a leading question, a partial clue, or a smaller related question they can reason from.
+
+Concept: {concept}
+Question: {prompt}
+Model answer (for your reference only — never state this directly): {correct_answer}
+
+Respond with ONLY a JSON object of this exact shape, no other text:
+{{"hint": "..."}}"""
 
 
 class GenerateRequest(BaseModel):
     concept_id: str
     quiz_type: str
     use_book_rag: bool = False
+    include_interleaved: bool = True
 
 
 class SubmitRequest(BaseModel):
-    concept_id: str
     question_id: str
     answer: str
-    quiz_type: str = "comprehension"
+
+
+class HintRequest(BaseModel):
+    question_id: str
 
 
 # How many of the most recently generated prompts (for this concept + quiz type) to
 # feed back to the LLM so it can rotate to new questions instead of repeating itself.
 RECENT_PROMPT_LIMIT = 8
+
+
+def _recent_prompts_note(conn, concept_id: str, quiz_type: str) -> str:
+    recent = conn.execute(
+        "SELECT prompt FROM quiz_questions WHERE concept_id=? AND quiz_type=? ORDER BY created_at DESC LIMIT ?",
+        (concept_id, quiz_type, RECENT_PROMPT_LIMIT),
+    ).fetchall()
+    if not recent:
+        return ""
+    seen = "\n".join(f"- {row['prompt']}" for row in recent)
+    return f"\nThe learner has already seen these questions recently — write different ones, not close rewordings:\n{seen}\n"
+
+
+async def _generate_questions(conn, concept_id: str, title: str, description: str, quiz_type: str, guidance: str, book_context: str = "") -> list[dict]:
+    """Calls the LLM for one concept and persists each returned question into
+    quiz_questions, keyed by concept_id (used both for the main concept and, when
+    interleaving, for a second concept mixed into the same quiz)."""
+    recent_prompts = _recent_prompts_note(conn, concept_id, quiz_type)
+    prompt = GENERATE_PROMPT.format(title=title, description=description or "", book_context=book_context, guidance=guidance, recent_prompts=recent_prompts)
+    generated = await complete_json([{"role": "user", "content": prompt}], model_key="quiz_gen")
+    raw_questions = generated["questions"]
+    if not raw_questions:
+        raise ValueError("model returned zero questions")
+
+    questions = []
+    for question in raw_questions:
+        question_id = str(uuid.uuid4())
+        question_type = question.get("type", "free_response")
+        options = question.get("options")
+        conn.execute(
+            "INSERT INTO quiz_questions(id, concept_id, quiz_type, question_type, prompt, options, correct_answer) VALUES(?,?,?,?,?,?,?)",
+            (question_id, concept_id, quiz_type, question_type, question["prompt"], json.dumps(options) if options else None, question.get("correct_answer")),
+        )
+        questions.append({"id": question_id, "type": question_type, "prompt": question["prompt"], "options": options, "concept_id": concept_id, "concept_title": title})
+    return questions
+
+
+def _pick_interleave_concept(conn, exclude_id: str):
+    """Picks the weakest, previously-studied concept other than the one being quizzed,
+    to mix a single recall question from into the current quiz (interleaved practice)."""
+    return conn.execute(
+        "SELECT id, title, description FROM concepts WHERE id != ? AND last_studied IS NOT NULL ORDER BY mastery_level ASC, last_studied ASC LIMIT 1",
+        (exclude_id,),
+    ).fetchone()
 
 
 @router.post("/generate")
@@ -76,10 +140,6 @@ async def generate(payload: GenerateRequest):
         concept = conn.execute("SELECT title, description FROM concepts WHERE id=?", (payload.concept_id,)).fetchone()
         if not concept:
             raise HTTPException(404, f"Unknown concept: {payload.concept_id}")
-        recent = conn.execute(
-            "SELECT prompt FROM quiz_questions WHERE concept_id=? AND quiz_type=? ORDER BY created_at DESC LIMIT ?",
-            (payload.concept_id, payload.quiz_type, RECENT_PROMPT_LIMIT),
-        ).fetchall()
 
     book_context = ""
     if payload.use_book_rag:
@@ -87,40 +147,27 @@ async def generate(payload: GenerateRequest):
         if passages:
             book_context = f"\nRelevant book passages:\n{passages}\n"
 
-    recent_prompts = ""
-    if recent:
-        seen = "\n".join(f"- {row['prompt']}" for row in recent)
-        recent_prompts = f"\nThe learner has already seen these questions recently — write different ones, not close rewordings:\n{seen}\n"
-
     guidance = QUIZ_TYPE_GUIDANCE.get(payload.quiz_type, QUIZ_TYPE_GUIDANCE["comprehension"])
-    prompt = GENERATE_PROMPT.format(
-        title=concept["title"],
-        description=concept["description"] or "",
-        book_context=book_context,
-        guidance=guidance,
-        recent_prompts=recent_prompts,
-    )
 
     try:
-        generated = await complete_json([{"role": "user", "content": prompt}], model_key="quiz_gen")
-        raw_questions = generated["questions"]
-        if not raw_questions:
-            raise ValueError("model returned zero questions")
+        with connection() as conn:
+            questions = await _generate_questions(conn, payload.concept_id, concept["title"], concept["description"], payload.quiz_type, guidance, book_context)
     except Exception:
         logger.exception("Quiz generation failed for concept %s", payload.concept_id)
         raise HTTPException(502, "Quiz generation is temporarily unavailable. Please try again.")
 
-    questions = []
-    with connection() as conn:
-        for question in raw_questions:
-            question_id = str(uuid.uuid4())
-            question_type = question.get("type", "free_response")
-            options = question.get("options")
-            conn.execute(
-                "INSERT INTO quiz_questions(id, concept_id, quiz_type, question_type, prompt, options, correct_answer) VALUES(?,?,?,?,?,?,?)",
-                (question_id, payload.concept_id, payload.quiz_type, question_type, question["prompt"], json.dumps(options) if options else None, question.get("correct_answer")),
-            )
-            questions.append({"id": question_id, "type": question_type, "prompt": question["prompt"], "options": options})
+    if payload.include_interleaved:
+        try:
+            with connection() as conn:
+                weak = _pick_interleave_concept(conn, payload.concept_id)
+                if weak:
+                    interleaved = await _generate_questions(conn, weak["id"], weak["title"], weak["description"], "comprehension", INTERLEAVE_GUIDANCE)
+                    questions += interleaved
+        except Exception:
+            # Interleaving is a bonus on top of the main quiz — if it fails, the
+            # learner still gets their primary quiz rather than a hard failure.
+            logger.exception("Interleaved question generation failed (concept excluded: %s)", payload.concept_id)
+
     return {"questions": questions}
 
 
@@ -128,21 +175,25 @@ async def generate(payload: GenerateRequest):
 async def submit(payload: SubmitRequest):
     with connection() as conn:
         stored = conn.execute("SELECT * FROM quiz_questions WHERE id=?", (payload.question_id,)).fetchone()
+    if not stored:
+        raise HTTPException(404, f"Unknown question: {payload.question_id}")
 
-    if stored and stored["question_type"] == "multiple_choice":
+    concept_id, quiz_type = stored["concept_id"], stored["quiz_type"]
+    gap = None
+
+    if stored["question_type"] == "multiple_choice":
         correct = payload.answer.strip() == (stored["correct_answer"] or "").strip()
         score = 5 if correct else 1
         explanation = "Correct!" if correct else f"Not quite — the correct answer is: {stored['correct_answer']}"
     else:
-        prompt_text = stored["prompt"] if stored else "Explain this concept."
-        model_answer = stored["correct_answer"] if stored else ""
         try:
             graded = await complete_json(
-                [{"role": "user", "content": GRADE_PROMPT.format(concept=payload.concept_id, prompt=prompt_text, correct_answer=model_answer, answer=payload.answer)}],
+                [{"role": "user", "content": GRADE_PROMPT.format(concept=concept_id, prompt=stored["prompt"], correct_answer=stored["correct_answer"] or "", answer=payload.answer)}],
                 model_key="evaluation",
             )
             score = max(0, min(5, int(graded["score"])))
             explanation = graded["explanation"]
+            gap = graded.get("gap")
         except Exception:
             # Grading is best-effort — if the evaluation model is unreachable/errors, fall
             # back to a neutral pass so a flaky LLM call doesn't block the review flow.
@@ -151,18 +202,46 @@ async def submit(payload: SubmitRequest):
         correct = score >= 3
 
     with connection() as conn:
-        state = conn.execute("SELECT * FROM spaced_repetition WHERE concept_id=?", (payload.concept_id,)).fetchone()
+        state = conn.execute("SELECT * FROM spaced_repetition WHERE concept_id=?", (concept_id,)).fetchone()
         review = schedule_review(score, *(state[key] for key in ("interval_days", "ease_factor", "repetitions")) if state else ())
         conn.execute(
             "INSERT INTO quiz_results(concept_id,quiz_type,question_id,question_type,answer,correct,score) VALUES(?,?,?,?,?,?,?)",
-            (payload.concept_id, payload.quiz_type, payload.question_id, stored["question_type"] if stored else None, payload.answer, correct, score),
+            (concept_id, quiz_type, payload.question_id, stored["question_type"], payload.answer, correct, score),
         )
         conn.execute("""INSERT INTO spaced_repetition(concept_id,next_review,interval_days,ease_factor,repetitions) VALUES(?,?,?,?,?)
                      ON CONFLICT(concept_id) DO UPDATE SET next_review=excluded.next_review, interval_days=excluded.interval_days, ease_factor=excluded.ease_factor, repetitions=excluded.repetitions""",
-                     (payload.concept_id, review.next_review.isoformat(), review.interval_days, review.ease_factor, review.repetitions))
-        mastery_level = apply_mastery_delta(conn, payload.concept_id, correct)
+                     (concept_id, review.next_review.isoformat(), review.interval_days, review.ease_factor, review.repetitions))
+        mastery_level = apply_mastery_delta(conn, concept_id, correct)
 
-    return {"correct": correct, "score": score, "explanation": explanation, "mastery_level": mastery_level, "next_review_date": review.next_review.isoformat()}
+    return {
+        "correct": correct,
+        "score": score,
+        "explanation": explanation,
+        "gap": gap,
+        "mastery_level": mastery_level,
+        "concept_id": concept_id,
+        "next_review_date": review.next_review.isoformat(),
+    }
+
+
+@router.post("/hint")
+async def hint(payload: HintRequest):
+    with connection() as conn:
+        stored = conn.execute("SELECT * FROM quiz_questions WHERE id=?", (payload.question_id,)).fetchone()
+        if not stored:
+            raise HTTPException(404, f"Unknown question: {payload.question_id}")
+        concept = conn.execute("SELECT title FROM concepts WHERE id=?", (stored["concept_id"],)).fetchone()
+
+    concept_title = concept["title"] if concept else stored["concept_id"]
+    try:
+        result = await complete_json(
+            [{"role": "user", "content": HINT_PROMPT.format(concept=concept_title, prompt=stored["prompt"], correct_answer=stored["correct_answer"] or "")}],
+            model_key="quiz_gen",
+        )
+        return {"hint": result["hint"]}
+    except Exception:
+        logger.exception("Hint generation failed for question %s", payload.question_id)
+        raise HTTPException(502, "Couldn't generate a hint right now. Please try again.")
 
 
 @router.get("/due-today")

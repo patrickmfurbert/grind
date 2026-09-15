@@ -12,7 +12,7 @@ const QUIZ_TYPES = ["comprehension", "application", "connection"];
 function Quiz() {
   const { activeConcept, setActiveConcept } = useStore();
   const [quizType, setQuizType] = useState("comprehension");
-  const { questions, result, error, generating, grading, generate, submit } = useQuiz(activeConcept?.id);
+  const { questions, result, error, generating, grading, generate, submit, getHint } = useQuiz(activeConcept?.id);
 
   useEffect(() => {
     if (activeConcept) generate(quizType);
@@ -37,8 +37,10 @@ function Quiz() {
           <QuizCard
             key={question.id}
             question={question}
+            isInterleaved={question.concept_id !== activeConcept.id}
             grading={grading}
-            onSubmit={(questionId, answer) => submit(questionId, answer, quizType)}
+            onSubmit={(questionId, answer) => submit(questionId, answer)}
+            onGetHint={getHint}
           />
         ))}
       <QuizResult result={result} />

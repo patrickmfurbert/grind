@@ -50,4 +50,26 @@ describe("QuizCard", () => {
     expect(screen.getByText("Grading…")).toBeInTheDocument();
     expect(screen.getByText("Grading…")).toBeDisabled();
   });
+
+  it("shows an interleaved badge naming the source concept when isInterleaved is set", () => {
+    const question = { ...mcqQuestion, concept_title: "CAP theorem" };
+    render(<QuizCard question={question} onSubmit={vi.fn()} isInterleaved />);
+    expect(screen.getByText("🔀 CAP theorem")).toBeInTheDocument();
+  });
+
+  it("requests and displays a hint for free-response questions without revealing the answer", async () => {
+    const onGetHint = vi.fn().mockResolvedValue("Think about what happens under heavy load.");
+    const user = userEvent.setup();
+    render(<QuizCard question={freeResponseQuestion} onSubmit={vi.fn()} onGetHint={onGetHint} />);
+
+    await user.click(screen.getByText("Need a hint?"));
+
+    expect(onGetHint).toHaveBeenCalledWith("q1");
+    expect(await screen.findByText("💡 Think about what happens under heavy load.")).toBeInTheDocument();
+  });
+
+  it("does not render a hint button for multiple choice questions", () => {
+    render(<QuizCard question={mcqQuestion} onSubmit={vi.fn()} onGetHint={vi.fn()} />);
+    expect(screen.queryByText("Need a hint?")).not.toBeInTheDocument();
+  });
 });

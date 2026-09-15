@@ -34,6 +34,18 @@ def update_mastery(payload: MasteryUpdate):
     return {"updated": True}
 
 
+@router.get("/weak-spots")
+def weak_spots(limit: int = 5):
+    """Concepts the learner has studied but hasn't mastered yet, weakest first — surfaces
+    where to focus instead of only showing what's due today by the SM-2 schedule."""
+    with connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM concepts WHERE last_studied IS NOT NULL AND mastery_level < 5 ORDER BY mastery_level ASC, last_studied ASC LIMIT ?",
+            (limit,),
+        ).fetchall()
+    return {"concepts": [dict(row) for row in rows]}
+
+
 def apply_mastery_delta(conn, concept_id: str, correct: bool) -> int:
     """Nudges a concept's mastery_level by +1 (capped at 5) on a correct/passing quiz
     answer, or -1 (floored at 0) otherwise. Used by quiz submission so mastery is

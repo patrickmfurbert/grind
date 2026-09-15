@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ConceptMap from "../components/ConceptMap/ConceptMap";
 import PhaseProgress from "../components/Progress/PhaseProgress";
+import WeakSpots from "../components/Quiz/WeakSpots";
 import { useProgress } from "../hooks/useProgress";
 import { useStore } from "../store";
 import { api } from "../hooks/api";
@@ -21,6 +22,11 @@ function Dashboard() {
     navigate("/study");
   }
 
+  function reviewWeakSpot(concept) {
+    setActiveConcept(concept);
+    navigate("/quiz");
+  }
+
   return (
     <section className="dashboard">
       <header>
@@ -29,6 +35,7 @@ function Dashboard() {
         <p>Distributed systems, AI, and system design through deliberate practice.</p>
       </header>
       <PhaseProgress summary={summary} />
+      <WeakSpots onSelect={reviewWeakSpot} />
       <ConceptMap phases={phases} onSelect={select} />
     </section>
   );

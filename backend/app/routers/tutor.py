@@ -17,6 +17,11 @@ router = APIRouter(prefix="/tutor", tags=["tutor"])
 
 PROMPT = """You are a Socratic tutor for Pat, a Software Engineer II who builds Java/Spring Boot microservices at Paychex using MongoDB, Kafka, Dapr, OpenShift, Kong, Jenkins, Gradle, Splunk, and OpenTelemetry. Pat transitioned from clinical nursing. Start from why, use useful visual or real-world analogies, make Pat defend answers, ask follow-up questions about failures and trade-offs, and get harder with demonstrated mastery. Current concept: {concept}. Mastery: {mastery}/5.{book_context}"""
 
+# Teach-back flips the usual roles (the "protege effect"): Pat explains the concept to
+# the tutor instead of the tutor explaining it, which surfaces gaps Pat wouldn't notice
+# just recognizing/recalling the material passively.
+TEACH_BACK_PROMPT = """You are running a "teach-back" session for Pat, a Software Engineer II who builds Java/Spring Boot microservices at Paychex. Pat is going to explain the concept below to you as if teaching it to a student. Do NOT explain the concept yourself or supply the answer. Instead, listen, ask skeptical follow-up questions, probe for hand-waved details, missed trade-offs, and edge cases/failure scenarios, and point out any specific gaps or imprecise reasoning. Only acknowledge Pat has covered it well once the key ideas and trade-offs have actually been demonstrated soundly. Current concept: {concept}. Mastery: {mastery}/5.{book_context}"""
+
 BOOK_CONTEXT_TEMPLATE = """
 
 Relevant passages from Pat's uploaded books (cite the title/page when you draw on these):
@@ -27,6 +32,7 @@ class ChatRequest(BaseModel):
     concept_id: str
     message: str
     conversation_history: list[dict[str, str]] = []
+    mode: Literal["learn", "teach_back"] = "learn"
 
 
 @router.post("/chat")
@@ -45,7 +51,8 @@ async def chat(payload: ChatRequest):
     # from the same page, but the citation UI only needs to show each source once.
     sources = list({(passage["title"], passage["page"]): {"title": passage["title"], "page": passage["page"]} for passage in book_passages}.values())
 
-    messages = [{"role": "system", "content": PROMPT.format(concept=name, mastery=mastery, book_context=book_context)}, *payload.conversation_history, {"role": "user", "content": payload.message}]
+    template = TEACH_BACK_PROMPT if payload.mode == "teach_back" else PROMPT
+    messages = [{"role": "system", "content": template.format(concept=name, mastery=mastery, book_context=book_context)}, *payload.conversation_history, {"role": "user", "content": payload.message}]
 
     async def events():
         try:

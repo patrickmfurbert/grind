@@ -24,4 +24,25 @@ describe("QuizResult", () => {
     );
     expect(screen.getByText("Review needed")).toBeInTheDocument();
   });
+
+  it("shows the specific gap when the grader identifies one", () => {
+    render(
+      <QuizResult
+        result={{
+          correct: true,
+          explanation: "Good answer.",
+          gap: "Didn't mention availability during partitions.",
+          next_review_date: "2026-01-01T00:00:00Z",
+        }}
+      />
+    );
+    expect(screen.getByText("🎯 Focus on: Didn't mention availability during partitions.")).toBeInTheDocument();
+  });
+
+  it("omits the gap line when there is no gap", () => {
+    render(
+      <QuizResult result={{ correct: true, explanation: "Nice trade-off analysis.", next_review_date: "2026-01-01T00:00:00Z" }} />
+    );
+    expect(screen.queryByText(/Focus on/)).not.toBeInTheDocument();
+  });
 });

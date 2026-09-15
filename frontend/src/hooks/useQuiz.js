@@ -31,27 +31,39 @@ export function useQuiz(conceptId) {
     [conceptId]
   );
 
-  const submit = useCallback(
-    async (questionId, answer, quizType) => {
-      setError("");
-      setGrading(true);
-      try {
-        const data = await api("/quiz/submit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ concept_id: conceptId, question_id: questionId, answer, quiz_type: quizType }),
-        });
-        setResult(data);
-        return data;
-      } catch {
-        setError("Couldn't grade that answer right now. Please try again.");
-        return null;
-      } finally {
-        setGrading(false);
-      }
-    },
-    [conceptId]
-  );
+  const submit = useCallback(async (questionId, answer) => {
+    setError("");
+    setGrading(true);
+    try {
+      const data = await api("/quiz/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question_id: questionId, answer }),
+      });
+      setResult(data);
+      return data;
+    } catch {
+      setError("Couldn't grade that answer right now. Please try again.");
+      return null;
+    } finally {
+      setGrading(false);
+    }
+  }, []);
 
-  return { questions, result, error, generating, grading, generate, submit };
+  // Fetches a scaffolded hint for a free-response question (nudges without revealing
+  // the answer). Best-effort: returns null on failure rather than surfacing a hard error.
+  const getHint = useCallback(async (questionId) => {
+    try {
+      const data = await api("/quiz/hint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question_id: questionId }),
+      });
+      return data.hint;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  return { questions, result, error, generating, grading, generate, submit, getHint };
 }
