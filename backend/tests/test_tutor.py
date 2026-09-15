@@ -11,6 +11,26 @@ SSE_BODY = (
     "data: [DONE]\n\n"
 )
 
+SUBSTANTIVE_RESPONSE = " ".join(["word"] * 50)
+
+
+def _stub_mastery_eval(monkeypatch, score):
+    import backend.app.routers.tutor as tutor_module
+
+    async def fake_complete_json(messages, model_key="evaluation"):
+        return {"score": score, "explanation": "stub"}
+
+    monkeypatch.setattr(tutor_module, "complete_json", fake_complete_json)
+
+
+def _stub_mastery_eval_raises(monkeypatch):
+    import backend.app.routers.tutor as tutor_module
+
+    async def fake_complete_json(messages, model_key="evaluation"):
+        raise RuntimeError("evaluation model unreachable")
+
+    monkeypatch.setattr(tutor_module, "complete_json", fake_complete_json)
+
 
 @pytest.fixture(autouse=True)
 def no_book_context(monkeypatch):
@@ -35,7 +55,14 @@ def test_chat_streams_tokens_from_openrouter(client):
         json={"concept_id": "why-distributed-systems-exist", "message": "Why does it exist?", "conversation_history": []},
     )
     assert response.status_code == 200
-    assert response.text == 'data: {"token": "Why"}\n\ndata: {"token": " do"}\n\ndata: [DONE]\n\n'
+    # A fresh session (no prior tutor turn) never qualifies for mastery evaluation, so
+    # the trailing mastery event reports no update.
+    assert response.text == (
+        'data: {"token": "Why"}\n\n'
+        'data: {"token": " do"}\n\n'
+        'data: {"mastery_updated": false, "mastery_level": 0}\n\n'
+        "data: [DONE]\n\n"
+    )
 
 
 @respx.mock
@@ -189,3 +216,164 @@ def test_chat_emits_sources_event_when_book_passages_found(client, monkeypatch):
         {"title": "Designing Data-Intensive Applications", "page": 12},
         {"title": "Designing Data-Intensive Applications", "page": 40},
     ]
+
+
+def _mastery_event(response_text):
+    line = next(line for line in response_text.splitlines() if '"mastery_updated"' in line)
+    return json.loads(line[len("data: "):])
+
+
+@respx.mock
+def test_mastery_never_updates_on_a_fresh_session_with_no_prior_tutor_turn(client, monkeypatch):
+    """Even a long, substantive first message can't have been a response to a tutor
+    challenge that never happened — mastery must never move on the opening turn."""
+    _stub_mastery_eval(monkeypatch, score=5)
+    respx.post("https://openrouter.ai/api/v1/chat/completions").mock(
+        return_value=httpx.Response(200, content=SSE_BODY, headers={"content-type": "text/event-stream"})
+    )
+
+    response = client.post(
+        "/tutor/chat",
+        json={"concept_id": "why-distributed-systems-exist", "message": SUBSTANTIVE_RESPONSE, "conversation_history": []},
+    )
+    assert response.status_code == 200
+    assert _mastery_event(response.text) == {"mastery_updated": False, "mastery_level": 0}
+
+
+@respx.mock
+def test_mastery_never_updates_when_the_last_message_is_a_question(client, monkeypatch):
+    _stub_mastery_eval(monkeypatch, score=5)
+    respx.post("https://openrouter.ai/api/v1/chat/completions").mock(
+        return_value=httpx.Response(200, content=SSE_BODY, headers={"content-type": "text/event-stream"})
+    )
+
+    response = client.post(
+        "/tutor/chat",
+        json={
+            "concept_id": "why-distributed-systems-exist",
+            "message": "Can you explain that again in a different way?",
+            "conversation_history": [{"role": "assistant", "content": "Why do you think distributed systems exist?"}],
+        },
+    )
+    assert response.status_code == 200
+    assert _mastery_event(response.text) == {"mastery_updated": False, "mastery_level": 0}
+
+
+@respx.mock
+def test_mastery_never_updates_for_a_response_under_the_word_minimum(client, monkeypatch):
+    _stub_mastery_eval(monkeypatch, score=5)
+    respx.post("https://openrouter.ai/api/v1/chat/completions").mock(
+        return_value=httpx.Response(200, content=SSE_BODY, headers={"content-type": "text/event-stream"})
+    )
+
+    response = client.post(
+        "/tutor/chat",
+        json={
+            "concept_id": "why-distributed-systems-exist",
+            "message": "Because one machine can't handle the load.",
+            "conversation_history": [{"role": "assistant", "content": "Why do you think distributed systems exist?"}],
+        },
+    )
+    assert response.status_code == 200
+    assert _mastery_event(response.text) == {"mastery_updated": False, "mastery_level": 0}
+
+
+@respx.mock
+def test_mastery_updates_only_after_a_substantive_response_to_a_tutor_challenge(client, monkeypatch):
+    _stub_mastery_eval(monkeypatch, score=5)
+    respx.post("https://openrouter.ai/api/v1/chat/completions").mock(
+        return_value=httpx.Response(200, content=SSE_BODY, headers={"content-type": "text/event-stream"})
+    )
+
+    response = client.post(
+        "/tutor/chat",
+        json={
+            "concept_id": "why-distributed-systems-exist",
+            "message": SUBSTANTIVE_RESPONSE,
+            "conversation_history": [{"role": "assistant", "content": "Why do you think distributed systems exist?"}],
+        },
+    )
+    assert response.status_code == 200
+    assert _mastery_event(response.text) == {"mastery_updated": True, "mastery_level": 1}
+
+
+@respx.mock
+def test_mastery_can_decrease_on_a_low_scoring_substantive_response(client, monkeypatch):
+    _stub_mastery_eval(monkeypatch, score=1)
+    respx.post("https://openrouter.ai/api/v1/chat/completions").mock(
+        return_value=httpx.Response(200, content=SSE_BODY, headers={"content-type": "text/event-stream"})
+    )
+    client.post("/progress/mastery", json={"concept_id": "why-distributed-systems-exist", "mastery_level": 3})
+
+    response = client.post(
+        "/tutor/chat",
+        json={
+            "concept_id": "why-distributed-systems-exist",
+            "message": SUBSTANTIVE_RESPONSE,
+            "conversation_history": [{"role": "assistant", "content": "Why do you think distributed systems exist?"}],
+        },
+    )
+    assert response.status_code == 200
+    event = _mastery_event(response.text)
+    assert event["mastery_updated"] is True
+    assert event["mastery_level"] == 2
+
+
+@respx.mock
+def test_mastery_eval_failure_reports_no_update_without_failing_the_chat(client, monkeypatch):
+    """If the evaluation model errors, the tutor reply itself must still succeed — the
+    conversation isn't held hostage by a best-effort mastery judgment."""
+    _stub_mastery_eval_raises(monkeypatch)
+    respx.post("https://openrouter.ai/api/v1/chat/completions").mock(
+        return_value=httpx.Response(200, content=SSE_BODY, headers={"content-type": "text/event-stream"})
+    )
+
+    response = client.post(
+        "/tutor/chat",
+        json={
+            "concept_id": "why-distributed-systems-exist",
+            "message": SUBSTANTIVE_RESPONSE,
+            "conversation_history": [{"role": "assistant", "content": "Why do you think distributed systems exist?"}],
+        },
+    )
+    assert response.status_code == 200
+    assert '"token": "Why"' in response.text
+    assert _mastery_event(response.text) == {"mastery_updated": False, "mastery_level": 0}
+
+
+@respx.mock
+def test_system_prompt_always_forbids_self_reported_mastery_and_requires_explain_back(client):
+    """Guards against the tutor narrating its own fake mastery grade in the reply text
+    (e.g. "Mastery level: 5/5 — well done!") and ensures every explanation is followed
+    by asking Pat to explain the idea back, per the Socratic contract."""
+    route = respx.post("https://openrouter.ai/api/v1/chat/completions").mock(
+        return_value=httpx.Response(200, content=SSE_BODY, headers={"content-type": "text/event-stream"})
+    )
+
+    response = client.post(
+        "/tutor/chat",
+        json={"concept_id": "why-distributed-systems-exist", "message": "Why does it exist?", "conversation_history": []},
+    )
+    assert response.status_code == 200
+    system_prompt = json.loads(route.calls.last.request.content)["messages"][0]["content"]
+    assert "never state a mastery level" in system_prompt.lower()
+    assert "explain that idea back in their own words" in system_prompt.lower()
+
+
+@respx.mock
+def test_system_prompt_nudges_deeper_engagement_when_mastery_evaluation_is_skipped(client):
+    route = respx.post("https://openrouter.ai/api/v1/chat/completions").mock(
+        return_value=httpx.Response(200, content=SSE_BODY, headers={"content-type": "text/event-stream"})
+    )
+
+    response = client.post(
+        "/tutor/chat",
+        json={
+            "concept_id": "why-distributed-systems-exist",
+            "message": "Can you say more about that?",
+            "conversation_history": [{"role": "assistant", "content": "Why do you think distributed systems exist?"}],
+        },
+    )
+    assert response.status_code == 200
+    system_prompt = json.loads(route.calls.last.request.content)["messages"][0]["content"]
+    assert "too brief to demonstrate real understanding" in system_prompt.lower()

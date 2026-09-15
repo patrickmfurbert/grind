@@ -76,6 +76,7 @@ h1 { font-family: var(--mono); font-weight: 800; font-size: clamp(1.75rem, 6vw, 
 .message.assistant :not(pre) > code { background: var(--panel-alt); padding: .1rem .3rem; border-radius: .3rem; }
 .message.user { background: #155e75; margin-left: 12%; }
 .message-sources { list-style: none; margin: .6rem 0 0; padding: 0; display: grid; gap: .3rem; font-size: .75rem; color: #9ca3af; }
+.mastery-update-note { justify-self: center; color: var(--accent-strong); font-size: .8rem; font-family: var(--mono); background: var(--panel); border: 1px solid var(--border-soft); border-radius: 999px; padding: .4rem .9rem; margin: 0; }
 .tutor-chat form { display: flex; gap: .6rem; padding: .75rem 0; background: var(--bg); flex-shrink: 0; }
 .tutor-chat input { flex: 1; min-width: 0; padding: .8rem; border: 1px solid var(--border-soft); border-radius: .5rem; color: inherit; background: var(--panel); }
 .tutor-chat form button { border: 0; padding: .8rem 1rem; border-radius: .5rem; color: #082f49; font-weight: bold; background: var(--accent); }

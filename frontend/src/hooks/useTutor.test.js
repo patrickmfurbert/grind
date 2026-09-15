@@ -199,6 +199,44 @@ describe("useTutor", () => {
     expect(result.current.streaming).toBe(false);
   });
 
+  it("exposes a mastery update only when the backend reports a genuine one, and never bakes it into a message", async () => {
+    global.fetch = mockFetchRouter({
+      chat: sseResponse([
+        'data: {"token": "answer"}\n\n',
+        'data: {"mastery_updated": true, "mastery_level": 3}\n\n',
+        "data: [DONE]\n\n",
+      ]),
+    });
+
+    const { result } = renderHook(() => useTutor("cap-theorem"));
+    await waitFor(() => expect(result.current.loadingHistory).toBe(false));
+    await act(async () => {
+      await result.current.send("hello");
+    });
+
+    await waitFor(() => expect(result.current.masteryUpdate).toEqual({ level: 3 }));
+    expect(result.current.messages).toHaveLength(2);
+    expect(result.current.messages[1]).toEqual({ role: "assistant", content: "answer", sources: [] });
+  });
+
+  it("keeps masteryUpdate null when the backend reports no update, and resets it on the next send", async () => {
+    global.fetch = mockFetchRouter({
+      chat: sseResponse([
+        'data: {"token": "answer"}\n\n',
+        'data: {"mastery_updated": false, "mastery_level": 1}\n\n',
+        "data: [DONE]\n\n",
+      ]),
+    });
+
+    const { result } = renderHook(() => useTutor("cap-theorem"));
+    await waitFor(() => expect(result.current.loadingHistory).toBe(false));
+    await act(async () => {
+      await result.current.send("hello");
+    });
+
+    expect(result.current.masteryUpdate).toBeNull();
+  });
+
   it("clearHistory deletes and reloads a fresh (empty) session", async () => {
     let historyCallCount = 0;
     global.fetch = vi.fn(async (url, options = {}) => {

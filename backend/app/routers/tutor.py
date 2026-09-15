@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from typing import Literal
 from uuid import uuid4
 
@@ -8,12 +9,17 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from ..database import connection
-from ..services.openrouter import stream_chat
+from ..services.openrouter import complete_json, stream_chat
 from ..services.rag import retrieve_passages
+from .progress import apply_mastery_delta
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tutor", tags=["tutor"])
+
+# Minimum length (in words) for a user message to count as a real attempt at
+# demonstrating understanding, rather than a quick question or acknowledgement.
+MIN_SUBSTANTIVE_WORDS = 50
 
 PROMPT = """You are a Socratic tutor for Pat, a Software Engineer II who builds Java/Spring Boot microservices at Paychex using MongoDB, Kafka, Dapr, OpenShift, Kong, Jenkins, Gradle, Splunk, and OpenTelemetry. Pat transitioned from clinical nursing. Start from why, use useful visual or real-world analogies, make Pat defend answers, ask follow-up questions about failures and trade-offs, and get harder with demonstrated mastery. Current concept: {concept}. Mastery: {mastery}/5.{book_context}"""
 
@@ -43,6 +49,55 @@ BOOK_CONTEXT_TEMPLATE = """
 Relevant passages from Pat's uploaded books (cite the title/page when you draw on these):
 {passages}"""
 
+# Mastery is evaluated and applied entirely in code (see _score_mastery/apply_mastery_delta
+# below), never by the model narrating its own grade — without this instruction models
+# reliably imitate the quiz UI unprompted (e.g. "Mastery level: 5/5 — well done!") right
+# after giving an explanation the learner never actually had to defend.
+NEVER_SELF_GRADE_NOTE = "\n\nNever state a mastery level, score, or grade yourself in your reply (for example, do not write \"Mastery level: X/5\" or declare that Pat has \"demonstrated mastery\"). Mastery is tracked by the system based on Pat's own responses, not your narration of them."
+
+# Reinforces the Socratic contract: an explanation alone never counts as demonstrated
+# understanding, so every explanation must be followed by asking the learner to restate
+# it in their own words before any credit is possible.
+EXPLAIN_BACK_NOTE = "\n\nAfter you give any explanation, always ask Pat to explain that idea back in their own words (or apply it to a concrete case) before treating it as understood — do not just move on or assume it landed."
+
+# Shown when the learner's latest message was a question or too short to have
+# demonstrated anything — nudges the tutor to ask for a deeper answer instead of
+# treating the exchange as a completed teaching moment.
+ENGAGE_MORE_NOTE = "\n\nPat's last message was a question or too brief to demonstrate real understanding of anything yet. Do not treat this as Pat having learned or shown mastery of the concept. Answer briefly if it was a genuine question, then explicitly ask Pat to explain the idea back in their own words, in some depth, before moving on."
+
+# Used for a single, non-streaming judgment of whether a substantive user response
+# actually demonstrates understanding, separate from (and after) the tutor's own reply.
+MASTERY_EVAL_PROMPT = """You are grading whether a learner's message demonstrates genuine understanding of a concept during a Socratic tutoring conversation. Judge the substance of their reasoning, not phrasing — a hedge, partial understanding, or a wrong-but-reasoned attempt should be scored on what it actually shows, not penalized for not being a "perfect" answer.
+
+Concept: {concept}
+The tutor's previous message (explanation or challenge): {prior_turn}
+Learner's response: {response}
+
+Score the learner's demonstrated understanding from 0-5 (5 = explained the concept accurately, in their own words, with correct reasoning and no hand-waving; 3 = partial or mixed understanding; 0 = no real understanding shown, evasive, or off-topic).
+
+Respond with ONLY a JSON object of this exact shape, no other text:
+{{"score": 0, "explanation": "..."}}"""
+
+
+def _is_substantive_response(message: str) -> bool:
+    """A response only counts as a real attempt at demonstrating understanding if it
+    isn't a question and has some real length to it — a quick "ok" or "why is that?"
+    never demonstrates anything, no matter what came before it."""
+    stripped = message.strip()
+    if not stripped or stripped.endswith("?"):
+        return False
+    return len(re.findall(r"\S+", stripped)) >= MIN_SUBSTANTIVE_WORDS
+
+
+def _can_evaluate_mastery(conversation_history: list[dict[str, str]], message: str) -> bool:
+    """Turn tracker: mastery can only be evaluated once the minimum exchange has
+    happened — tutor explains/challenges (the immediately preceding turn), THEN Pat
+    responds substantively. A fresh session (no prior turn) or a trivial/question
+    response never qualifies, regardless of mastery level or phase."""
+    if not conversation_history or conversation_history[-1]["role"] != "assistant":
+        return False
+    return _is_substantive_response(message)
+
 
 class ChatRequest(BaseModel):
     concept_id: str
@@ -57,6 +112,7 @@ async def chat(payload: ChatRequest):
         concept = conn.execute("SELECT title, mastery_level, phase FROM concepts WHERE id=?", (payload.concept_id,)).fetchone()
     name, mastery = (concept["title"], concept["mastery_level"]) if concept else (payload.concept_id, 0)
     is_algo_phase = concept["phase"] == "Phase 6" if concept else False
+    eligible_for_mastery = bool(concept) and _can_evaluate_mastery(payload.conversation_history, payload.message)
 
     # Retrieve on the concept name rather than the student's raw answer: it stays a
     # consistent, on-topic query regardless of how the student phrases their response,
@@ -72,7 +128,24 @@ async def chat(payload: ChatRequest):
         template = TEACH_BACK_ALGO_PROMPT if is_algo_phase else TEACH_BACK_PROMPT
     else:
         template = ALGO_PATTERN_PROMPT if is_algo_phase else PROMPT
-    messages = [{"role": "system", "content": template.format(concept=name, mastery=mastery, book_context=book_context)}, *payload.conversation_history, {"role": "user", "content": payload.message}]
+    system_prompt = template.format(concept=name, mastery=mastery, book_context=book_context) + NEVER_SELF_GRADE_NOTE + EXPLAIN_BACK_NOTE
+    if not eligible_for_mastery:
+        system_prompt += ENGAGE_MORE_NOTE
+    messages = [{"role": "system", "content": system_prompt}, *payload.conversation_history, {"role": "user", "content": payload.message}]
+
+    async def _evaluate_mastery() -> tuple[bool, int]:
+        """Grades Pat's just-submitted response (not the tutor's upcoming reply) against
+        the tutor's prior turn, and applies a real mastery delta only when the exchange
+        earned it. Returns (mastery_updated, mastery_level)."""
+        prior_turn = payload.conversation_history[-1]["content"]
+        graded = await complete_json(
+            [{"role": "user", "content": MASTERY_EVAL_PROMPT.format(concept=name, prior_turn=prior_turn, response=payload.message)}],
+            model_key="evaluation",
+        )
+        score = max(0, min(5, int(graded["score"])))
+        with connection() as conn:
+            new_level = apply_mastery_delta(conn, payload.concept_id, score >= 3)
+        return True, new_level
 
     async def events():
         try:
@@ -86,6 +159,17 @@ async def chat(payload: ChatRequest):
             # as an HTTP error status — send an SSE error event the frontend can render.
             logger.exception("Tutor chat stream failed for concept %s", payload.concept_id)
             yield f"data: {json.dumps({'error': 'The tutor is unavailable right now. Please try again.'})}\n\n"
+
+        mastery_updated, mastery_level = False, mastery
+        if eligible_for_mastery:
+            try:
+                mastery_updated, mastery_level = await _evaluate_mastery()
+            except Exception:
+                # Mastery evaluation is a bonus judgment on top of the conversation — if
+                # the evaluation model is unreachable/errors, the chat itself still
+                # succeeded, so we just report no mastery change rather than fail the turn.
+                logger.exception("Mastery evaluation failed for concept %s", payload.concept_id)
+        yield f"data: {json.dumps({'mastery_updated': mastery_updated, 'mastery_level': mastery_level})}\n\n"
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(events(), media_type="text/event-stream")

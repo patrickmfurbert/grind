@@ -15,7 +15,7 @@ const OPENERS = {
  * Supports a "teach-back" mode where the learner explains the concept and the tutor
  * probes for gaps instead of explaining it. */
 function TutorChat({ concept }) {
-  const { messages, send, streaming, loadingHistory, clearHistory } = useTutor(concept.id);
+  const { messages, send, streaming, loadingHistory, clearHistory, masteryUpdate } = useTutor(concept.id);
   const [mode, setMode] = useState("learn");
   const chatRef = useRef(null);
   const opener = { role: "assistant", content: OPENERS[mode](concept.title) };
@@ -51,6 +51,9 @@ function TutorChat({ concept }) {
         {thread.map((message, index) => (
           <TutorMessage key={index} role={message.role} content={message.content} sources={message.sources} />
         ))}
+        {masteryUpdate && (
+          <p className="mastery-update-note">📈 Mastery updated to {masteryUpdate.level}/5 based on your explanation.</p>
+        )}
       </div>
       <TutorInput onSend={(message) => send(message, mode)} disabled={streaming} />
       <button type="button" className="link-button start-fresh" onClick={clearHistory} disabled={streaming}>

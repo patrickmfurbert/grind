@@ -10,6 +10,7 @@ export function useTutor(conceptId) {
   const [messages, setMessages] = useState([]);
   const [streaming, setStreaming] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [masteryUpdate, setMasteryUpdate] = useState(null);
   const sessionIdRef = useRef(null);
 
   const loadHistory = useCallback(async () => {
@@ -54,6 +55,7 @@ export function useTutor(conceptId) {
       setMessages((items) => [...items, { role: "user", content: message }, { role: "assistant", content: "" }]);
       saveMessage("user", message);
       setStreaming(true);
+      setMasteryUpdate(null);
       let finalText = "";
       let failed = false;
       let sources = [];
@@ -79,6 +81,11 @@ export function useTutor(conceptId) {
               text = text ? `${text}\n\n⚠️ ${payload.error}` : `⚠️ ${payload.error}`;
             } else if (payload.sources) {
               sources = payload.sources;
+              continue;
+            } else if (typeof payload.mastery_updated === "boolean") {
+              // Only surface an honest, code-evaluated mastery change — never something
+              // the model narrated inline as part of its own reply text.
+              if (payload.mastery_updated) setMasteryUpdate({ level: payload.mastery_level });
               continue;
             } else {
               text += payload.token;
@@ -106,7 +113,7 @@ export function useTutor(conceptId) {
     await loadHistory();
   }, [conceptId, loadHistory]);
 
-  return { messages, send, streaming, loadingHistory, clearHistory };
+  return { messages, send, streaming, loadingHistory, clearHistory, masteryUpdate };
 }
 
 
