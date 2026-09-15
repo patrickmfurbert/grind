@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTutor } from "../../hooks/useTutor";
 import TutorMessage from "./TutorMessage";
 import TutorInput from "./TutorInput";
@@ -17,8 +17,17 @@ const OPENERS = {
 function TutorChat({ concept }) {
   const { messages, send, streaming, loadingHistory, clearHistory } = useTutor(concept.id);
   const [mode, setMode] = useState("learn");
+  const chatRef = useRef(null);
   const opener = { role: "assistant", content: OPENERS[mode](concept.title) };
   const thread = messages.length ? messages : [opener];
+
+  // Keep the newest message in view — both right after sending, and continuously as
+  // the assistant's reply streams in token by token — instead of leaving the learner
+  // scrolled up past it (or having to scroll down themselves) each turn.
+  useEffect(() => {
+    const node = chatRef.current;
+    if (node) node.scrollTop = node.scrollHeight;
+  }, [thread]);
 
   if (loadingHistory) {
     return (
@@ -38,7 +47,7 @@ function TutorChat({ concept }) {
           Teach it back
         </button>
       </div>
-      <div className="chat">
+      <div className="chat" ref={chatRef}>
         {thread.map((message, index) => (
           <TutorMessage key={index} role={message.role} content={message.content} sources={message.sources} />
         ))}
