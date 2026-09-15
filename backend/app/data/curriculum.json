@@ -536,5 +536,299 @@
     "prerequisites": [
       "trade-off-articulation-framework"
     ]
+  },
+  {
+    "id": "arrays-and-hashing-fundamentals",
+    "title": "Arrays and Hashing fundamentals",
+    "description": "Why O(1)-lookup structures (hash sets/maps) exist and which existence, frequency, and duplicate-detection problems they solve that plain arrays can't \u2014 recognize it whenever you need fast membership checks or counting.",
+    "prerequisites": [
+      "how-to-whiteboard-under-pressure"
+    ],
+    "code_demos": [
+      {
+        "title": "Detect duplicates in O(n)",
+        "language": "python",
+        "starter": "# Exercise: return True if any value appears twice, using a hash set (not nested loops).\ndef has_duplicate(values):\n    seen = set()\n    # TODO: fill this in\n    return False\n\nprint(has_duplicate([1, 2, 3, 2]))  # expect True\nprint(has_duplicate([1, 2, 3]))      # expect False\n"
+      },
+      {
+        "title": "Group anagrams by sorted-key hashing",
+        "language": "python",
+        "starter": "# Exercise: group strings that are anagrams of each other using a hash map keyed by sorted letters.\ndef group_anagrams(words):\n    groups = {}\n    # TODO: fill this in\n    return list(groups.values())\n\nprint(group_anagrams(['eat', 'tea', 'tan', 'ate', 'nat', 'bat']))\n"
+      }
+    ],
+    "phase": "Phase 6"
+  },
+  {
+    "id": "two-pointers-pattern",
+    "title": "Two Pointers pattern",
+    "description": "Why converging or parallel pointers replace nested loops on sorted or linear data \u2014 recognize it whenever you're comparing pairs, or shrinking a search space from both ends.",
+    "prerequisites": [
+      "arrays-and-hashing-fundamentals"
+    ],
+    "code_demos": [
+      {
+        "title": "Two-sum on a sorted array",
+        "language": "python",
+        "starter": "# Exercise: given a sorted array, find two numbers that add to target using two pointers (no hash map).\ndef two_sum_sorted(nums, target):\n    left, right = 0, len(nums) - 1\n    # TODO: fill this in\n    return None\n\nprint(two_sum_sorted([1, 2, 4, 6, 10], 8))  # expect (1, 3) as indices\n"
+      },
+      {
+        "title": "Is a string a palindrome (ignoring case/spaces)?",
+        "language": "python",
+        "starter": "# Exercise: check if a string reads the same forwards/backwards using converging pointers.\ndef is_palindrome(s):\n    left, right = 0, len(s) - 1\n    # TODO: fill this in\n    return True\n\nprint(is_palindrome('A man a plan a canal Panama'.replace(' ', '').lower()))\n"
+      }
+    ],
+    "phase": "Phase 6"
+  },
+  {
+    "id": "sliding-window-pattern",
+    "title": "Sliding Window pattern",
+    "description": "Why a moving subarray/substring window avoids recomputing overlapping work \u2014 recognize it whenever the problem asks for a best/longest/shortest contiguous range.",
+    "prerequisites": [
+      "two-pointers-pattern"
+    ],
+    "code_demos": [
+      {
+        "title": "Longest substring without repeating characters",
+        "language": "python",
+        "starter": "# Exercise: find the length of the longest substring with no repeated characters.\ndef longest_unique_substring(s):\n    window = set()\n    left = best = 0\n    # TODO: fill this in\n    return best\n\nprint(longest_unique_substring('abcabcbb'))  # expect 3\n"
+      },
+      {
+        "title": "Max sum of a fixed-size window",
+        "language": "python",
+        "starter": "# Exercise: find the maximum sum of any contiguous subarray of size k.\ndef max_window_sum(nums, k):\n    # TODO: fill this in (avoid re-summing the whole window every time)\n    return 0\n\nprint(max_window_sum([2, 1, 5, 1, 3, 2], 3))  # expect 9\n"
+      }
+    ],
+    "phase": "Phase 6"
+  },
+  {
+    "id": "binary-search-pattern",
+    "title": "Binary Search pattern",
+    "description": "Why halving a monotonic search space beats linear scanning \u2014 recognize it whenever the answer space (not just the array itself) is sorted or monotonic, including 'search on the answer' problems.",
+    "prerequisites": [
+      "sliding-window-pattern"
+    ],
+    "code_demos": [
+      {
+        "title": "Classic binary search",
+        "language": "python",
+        "starter": "# Exercise: return the index of target in a sorted array, or -1.\ndef binary_search(nums, target):\n    lo, hi = 0, len(nums) - 1\n    # TODO: fill this in\n    return -1\n\nprint(binary_search([1, 3, 5, 7, 9, 11], 7))  # expect 3\n"
+      },
+      {
+        "title": "Search on the answer: minimum viable capacity",
+        "language": "python",
+        "starter": "# Exercise: find the smallest capacity that lets you ship all weights within `days` days,\n# by binary-searching over the *answer* (capacity), not the array.\ndef min_capacity(weights, days):\n    lo, hi = max(weights), sum(weights)\n    # TODO: fill this in\n    return lo\n\nprint(min_capacity([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 5))  # expect 15\n"
+      }
+    ],
+    "phase": "Phase 6"
+  },
+  {
+    "id": "linked-list-patterns",
+    "title": "Linked List patterns",
+    "description": "Why pointer manipulation (fast/slow pointers, dummy heads, in-place reversal) solves problems arrays can't in O(1) extra space \u2014 recognize it whenever you need to detect cycles, reorder, or splice nodes in place.",
+    "prerequisites": [
+      "binary-search-pattern"
+    ],
+    "code_demos": [
+      {
+        "title": "Detect a cycle (fast/slow pointers)",
+        "language": "python",
+        "starter": "class Node:\n    def __init__(self, value, next=None):\n        self.value, self.next = value, next\n\n# Exercise: return True if the linked list starting at head has a cycle.\ndef has_cycle(head):\n    slow = fast = head\n    # TODO: fill this in\n    return False\n\na = Node(1); b = Node(2); a.next = b; b.next = a  # cyclic\nprint(has_cycle(a))  # expect True\n"
+      },
+      {
+        "title": "Reverse a linked list in place",
+        "language": "python",
+        "starter": "class Node:\n    def __init__(self, value, next=None):\n        self.value, self.next = value, next\n\n# Exercise: reverse the list in place and return the new head.\ndef reverse_list(head):\n    prev = None\n    # TODO: fill this in\n    return prev\n\nhead = Node(1, Node(2, Node(3)))\nnew_head = reverse_list(head)\nout = []\nwhile new_head:\n    out.append(new_head.value)\n    new_head = new_head.next\nprint(out)  # expect [3, 2, 1]\n"
+      }
+    ],
+    "phase": "Phase 6"
+  },
+  {
+    "id": "trees-and-bfs-traversal",
+    "title": "Trees and BFS traversal",
+    "description": "Why level-order traversal with a queue is the clean way to reason level-by-level or find the shortest number of hops \u2014 recognize it whenever the problem cares about depth/level or the 'closest' node.",
+    "prerequisites": [
+      "linked-list-patterns"
+    ],
+    "code_demos": [
+      {
+        "title": "Level-order traversal",
+        "language": "python",
+        "starter": "from collections import deque\n\nclass Node:\n    def __init__(self, value, left=None, right=None):\n        self.value, self.left, self.right = value, left, right\n\n# Exercise: return a list of lists, one per tree level, using a queue (BFS).\ndef level_order(root):\n    if not root:\n        return []\n    queue = deque([root])\n    levels = []\n    # TODO: fill this in\n    return levels\n\nroot = Node(1, Node(2), Node(3, Node(4)))\nprint(level_order(root))  # expect [[1], [2, 3], [4]]\n"
+      },
+      {
+        "title": "Minimum depth of a binary tree",
+        "language": "python",
+        "starter": "from collections import deque\n\nclass Node:\n    def __init__(self, value, left=None, right=None):\n        self.value, self.left, self.right = value, left, right\n\n# Exercise: return the depth of the nearest leaf, using BFS (stop at the first leaf found).\ndef min_depth(root):\n    if not root:\n        return 0\n    queue = deque([(root, 1)])\n    # TODO: fill this in\n    return 0\n\nroot = Node(1, Node(2), Node(3, Node(4)))\nprint(min_depth(root))  # expect 2\n"
+      }
+    ],
+    "phase": "Phase 6"
+  },
+  {
+    "id": "trees-and-dfs-traversal",
+    "title": "Trees and DFS traversal",
+    "description": "Why recursive (or stack-based) depth-first traversal is the natural fit for path, subtree, and ancestor problems \u2014 recognize it whenever you need to fully explore one path before backtracking.",
+    "prerequisites": [
+      "trees-and-bfs-traversal"
+    ],
+    "code_demos": [
+      {
+        "title": "Max depth of a binary tree (recursive DFS)",
+        "language": "python",
+        "starter": "class Node:\n    def __init__(self, value, left=None, right=None):\n        self.value, self.left, self.right = value, left, right\n\n# Exercise: return the height of the tree using recursive DFS.\ndef max_depth(root):\n    if not root:\n        return 0\n    # TODO: fill this in\n    return 0\n\nroot = Node(1, Node(2, Node(4)), Node(3))\nprint(max_depth(root))  # expect 3\n"
+      },
+      {
+        "title": "Path sum: does any root-to-leaf path add up to target?",
+        "language": "python",
+        "starter": "class Node:\n    def __init__(self, value, left=None, right=None):\n        self.value, self.left, self.right = value, left, right\n\n# Exercise: return True if any root-to-leaf path sums to target, using DFS.\ndef has_path_sum(root, target):\n    if not root:\n        return False\n    # TODO: fill this in\n    return False\n\nroot = Node(5, Node(4, Node(11, Node(7), Node(2))), Node(8))\nprint(has_path_sum(root, 22))  # expect True\n"
+      }
+    ],
+    "phase": "Phase 6"
+  },
+  {
+    "id": "heap-and-priority-queue",
+    "title": "Heap and Priority Queue",
+    "description": "Why a heap gives O(log n) access to the min/max element instead of re-sorting the whole collection \u2014 recognize it whenever you repeatedly need the 'top K', a running median, or the next-most-urgent item.",
+    "prerequisites": [
+      "trees-and-dfs-traversal"
+    ],
+    "code_demos": [
+      {
+        "title": "Top K frequent elements",
+        "language": "python",
+        "starter": "import heapq\nfrom collections import Counter\n\n# Exercise: return the k most frequent elements using a heap (not sorting everything).\ndef top_k_frequent(nums, k):\n    counts = Counter(nums)\n    # TODO: fill this in\n    return []\n\nprint(top_k_frequent([1, 1, 1, 2, 2, 3], 2))  # expect [1, 2]\n"
+      },
+      {
+        "title": "Kth largest element in a stream",
+        "language": "python",
+        "starter": "import heapq\n\n# Exercise: maintain a min-heap of size k so the top is always the kth largest seen so far.\nclass KthLargest:\n    def __init__(self, k, nums):\n        self.k = k\n        self.heap = []\n        for n in nums:\n            self.add(n)\n\n    def add(self, val):\n        # TODO: fill this in\n        return self.heap[0] if self.heap else None\n\nstream = KthLargest(3, [4, 5, 8, 2])\nprint(stream.add(3))  # expect 4\nprint(stream.add(10))  # expect 5\n"
+      }
+    ],
+    "phase": "Phase 6"
+  },
+  {
+    "id": "backtracking",
+    "title": "Backtracking",
+    "description": "Why systematic choose/explore/un-choose recursion is how you enumerate all valid combinations or permutations without blindly brute-forcing every possibility \u2014 recognize it whenever the problem asks for 'all ways to...'.",
+    "prerequisites": [
+      "heap-and-priority-queue"
+    ],
+    "code_demos": [
+      {
+        "title": "All subsets of a set",
+        "language": "python",
+        "starter": "# Exercise: return every subset of nums, using backtracking (include/exclude each element).\ndef subsets(nums):\n    result = []\n    path = []\n\n    def backtrack(start):\n        # TODO: fill this in\n        pass\n\n    backtrack(0)\n    return result\n\nprint(subsets([1, 2, 3]))\n"
+      },
+      {
+        "title": "Combination sum",
+        "language": "python",
+        "starter": "# Exercise: return all unique combinations of candidates that sum to target (numbers reusable).\ndef combination_sum(candidates, target):\n    result = []\n    path = []\n\n    def backtrack(start, remaining):\n        # TODO: fill this in\n        pass\n\n    backtrack(0, target)\n    return result\n\nprint(combination_sum([2, 3, 6, 7], 7))  # expect [[2, 2, 3], [7]]\n"
+      }
+    ],
+    "phase": "Phase 6"
+  },
+  {
+    "id": "graphs-bfs",
+    "title": "Graphs BFS",
+    "description": "Why breadth-first search guarantees the shortest path in an unweighted graph \u2014 recognize it whenever you need minimum hops/steps between nodes, or to check reachability level by level.",
+    "prerequisites": [
+      "backtracking"
+    ],
+    "code_demos": [
+      {
+        "title": "Shortest path (hops) between two nodes",
+        "language": "python",
+        "starter": "from collections import deque\n\n# Exercise: return the minimum number of edges between start and end, using BFS.\ndef shortest_hops(graph, start, end):\n    queue = deque([(start, 0)])\n    visited = {start}\n    # TODO: fill this in\n    return -1\n\ngraph = {'a': ['b', 'c'], 'b': ['d'], 'c': ['d'], 'd': ['e']}\nprint(shortest_hops(graph, 'a', 'e'))  # expect 3\n"
+      },
+      {
+        "title": "Is the whole graph reachable from a node?",
+        "language": "python",
+        "starter": "from collections import deque\n\n# Exercise: return True if every node is reachable from start, using BFS.\ndef is_fully_reachable(graph, start):\n    visited = {start}\n    queue = deque([start])\n    # TODO: fill this in\n    return len(visited) == len(graph)\n\ngraph = {'a': ['b'], 'b': ['c'], 'c': [], 'd': []}\nprint(is_fully_reachable(graph, 'a'))  # expect False ('d' unreachable)\n"
+      }
+    ],
+    "phase": "Phase 6"
+  },
+  {
+    "id": "graphs-dfs",
+    "title": "Graphs DFS",
+    "description": "Why depth-first search is the natural fit for exploring connectivity, cycles, and topological order \u2014 recognize it whenever you need to fully explore a component or detect a cycle/ordering constraint.",
+    "prerequisites": [
+      "graphs-bfs"
+    ],
+    "code_demos": [
+      {
+        "title": "Count connected components",
+        "language": "python",
+        "starter": "# Exercise: return the number of connected components in an undirected graph, using DFS.\ndef count_components(graph):\n    visited = set()\n    count = 0\n\n    def dfs(node):\n        # TODO: fill this in\n        pass\n\n    for node in graph:\n        if node not in visited:\n            count += 1\n            dfs(node)\n    return count\n\ngraph = {'a': ['b'], 'b': ['a'], 'c': ['d'], 'd': ['c'], 'e': []}\nprint(count_components(graph))  # expect 3\n"
+      },
+      {
+        "title": "Detect a cycle in a directed graph",
+        "language": "python",
+        "starter": "# Exercise: return True if the directed graph has a cycle, using DFS with a recursion-stack set.\ndef has_cycle(graph):\n    visited, in_stack = set(), set()\n\n    def dfs(node):\n        # TODO: fill this in\n        return False\n\n    return any(dfs(node) for node in graph if node not in visited)\n\ngraph = {'a': ['b'], 'b': ['c'], 'c': ['a']}\nprint(has_cycle(graph))  # expect True\n"
+      }
+    ],
+    "phase": "Phase 6"
+  },
+  {
+    "id": "dynamic-programming-fundamentals",
+    "title": "Dynamic Programming fundamentals",
+    "description": "Why caching overlapping subproblem results turns exponential brute force into polynomial time \u2014 recognize it whenever a problem has optimal substructure and the recursive brute force keeps recomputing the same subcalls.",
+    "prerequisites": [
+      "graphs-dfs"
+    ],
+    "code_demos": [
+      {
+        "title": "Fibonacci with memoization",
+        "language": "python",
+        "starter": "# Exercise: compute fib(n) in O(n) using a memo dict instead of the naive O(2^n) recursion.\ndef fib(n, memo=None):\n    if memo is None:\n        memo = {}\n    # TODO: fill this in\n    return 0\n\nprint(fib(30))  # expect 832040\n"
+      },
+      {
+        "title": "Coin change: fewest coins to make an amount",
+        "language": "python",
+        "starter": "# Exercise: return the minimum number of coins to make amount, or -1 if impossible (bottom-up DP).\ndef coin_change(coins, amount):\n    dp = [float('inf')] * (amount + 1)\n    dp[0] = 0\n    # TODO: fill this in\n    return dp[amount] if dp[amount] != float('inf') else -1\n\nprint(coin_change([1, 2, 5], 11))  # expect 3\n"
+      }
+    ],
+    "phase": "Phase 6"
+  },
+  {
+    "id": "greedy-algorithms",
+    "title": "Greedy algorithms",
+    "description": "Why making the locally-best choice at each step can reach a global optimum without exploring every path \u2014 recognize it whenever the problem has the exchange-argument/matroid property (and learn to recognize when greedy fails and DP is needed instead).",
+    "prerequisites": [
+      "dynamic-programming-fundamentals"
+    ],
+    "code_demos": [
+      {
+        "title": "Maximum subarray sum (Kadane's algorithm)",
+        "language": "python",
+        "starter": "# Exercise: return the maximum sum of any contiguous subarray, greedily extending or restarting.\ndef max_subarray(nums):\n    best = current = nums[0]\n    # TODO: fill this in\n    return best\n\nprint(max_subarray([-2, 1, -3, 4, -1, 2, 1, -5, 4]))  # expect 6\n"
+      },
+      {
+        "title": "Minimum number of jumps to reach the end",
+        "language": "python",
+        "starter": "# Exercise: return True if you can reach the last index, greedily tracking the furthest reachable spot.\ndef can_reach_end(nums):\n    furthest = 0\n    # TODO: fill this in\n    return True\n\nprint(can_reach_end([2, 3, 1, 1, 4]))  # expect True\nprint(can_reach_end([3, 2, 1, 0, 4]))  # expect False\n"
+      }
+    ],
+    "phase": "Phase 6"
+  },
+  {
+    "id": "interval-problems",
+    "title": "Interval problems",
+    "description": "Why sorting by start (or end) time turns overlap, merge, and scheduling problems into a single linear pass \u2014 recognize it whenever the input is a list of ranges/intervals.",
+    "prerequisites": [
+      "greedy-algorithms"
+    ],
+    "code_demos": [
+      {
+        "title": "Merge overlapping intervals",
+        "language": "python",
+        "starter": "# Exercise: merge all overlapping intervals; input isn't guaranteed sorted.\ndef merge_intervals(intervals):\n    intervals = sorted(intervals)\n    merged = []\n    # TODO: fill this in\n    return merged\n\nprint(merge_intervals([[1, 3], [2, 6], [8, 10], [15, 18]]))\n# expect [[1, 6], [8, 10], [15, 18]]\n"
+      },
+      {
+        "title": "Minimum number of rooms needed to schedule meetings",
+        "language": "python",
+        "starter": "import heapq\n\n# Exercise: return the minimum number of rooms needed so no two overlapping meetings share one.\ndef min_meeting_rooms(intervals):\n    intervals = sorted(intervals)\n    heap = []\n    # TODO: fill this in\n    return len(heap)\n\nprint(min_meeting_rooms([[0, 30], [5, 10], [15, 20]]))  # expect 2\n"
+      }
+    ],
+    "phase": "Phase 6"
   }
 ]

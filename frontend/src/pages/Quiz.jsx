@@ -13,6 +13,7 @@ function Quiz() {
   const { activeConcept, setActiveConcept } = useStore();
   const [quizType, setQuizType] = useState("comprehension");
   const { questions, result, error, generating, grading, generate, submit, getHint } = useQuiz(activeConcept?.id);
+  const quizTypes = activeConcept?.phase === "Phase 6" ? [...QUIZ_TYPES, "pattern_recognition"] : QUIZ_TYPES;
 
   useEffect(() => {
     if (activeConcept) generate(quizType);
@@ -24,9 +25,9 @@ function Quiz() {
     <section className="quiz">
       <h1>{activeConcept.title}</h1>
       <div className="quiz-types">
-        {QUIZ_TYPES.map((type) => (
+        {quizTypes.map((type) => (
           <button key={type} className={type === quizType ? "active" : ""} onClick={() => setQuizType(type)}>
-            {type}
+            {type.replace("_", " ")}
           </button>
         ))}
       </div>

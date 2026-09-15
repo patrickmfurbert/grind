@@ -40,4 +40,24 @@ describe("WeakSpots", () => {
     await user.click(await screen.findByText("CAP theorem"));
     expect(onSelect).toHaveBeenCalledWith({ id: "cap-theorem", title: "CAP theorem", mastery_level: 1 });
   });
+
+  it("shows a wrong-count badge when the concept has been missed before", async () => {
+    global.fetch = vi.fn().mockResolvedValue(
+      jsonResponse({ concepts: [{ id: "two-pointers-pattern", title: "Two Pointers pattern", mastery_level: 2, wrong_count: 3 }] })
+    );
+    render(<WeakSpots onSelect={vi.fn()} />);
+
+    expect(await screen.findByText("Two Pointers pattern")).toBeInTheDocument();
+    expect(screen.getByText("✗ 3")).toBeInTheDocument();
+  });
+
+  it("omits the wrong-count badge when wrong_count is zero", async () => {
+    global.fetch = vi.fn().mockResolvedValue(
+      jsonResponse({ concepts: [{ id: "cap-theorem", title: "CAP theorem", mastery_level: 1, wrong_count: 0 }] })
+    );
+    render(<WeakSpots onSelect={vi.fn()} />);
+
+    await screen.findByText("CAP theorem");
+    expect(screen.queryByText(/✗/)).not.toBeInTheDocument();
+  });
 });

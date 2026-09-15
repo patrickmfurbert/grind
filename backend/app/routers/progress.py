@@ -36,11 +36,22 @@ def update_mastery(payload: MasteryUpdate):
 
 @router.get("/weak-spots")
 def weak_spots(limit: int = 5):
-    """Concepts the learner has studied but hasn't mastered yet, weakest first — surfaces
-    where to focus instead of only showing what's due today by the SM-2 schedule."""
+    """Concepts the learner has studied but hasn't mastered yet, ranked by how often
+    they get answered wrong first (so a frequently-missed pattern surfaces above one
+    that's merely never been reviewed), then by mastery/recency — surfaces where to
+    focus instead of only showing what's due today by the SM-2 schedule."""
     with connection() as conn:
         rows = conn.execute(
-            "SELECT * FROM concepts WHERE last_studied IS NOT NULL AND mastery_level < 5 ORDER BY mastery_level ASC, last_studied ASC LIMIT ?",
+            """SELECT c.*, COALESCE(w.wrong_count, 0) AS wrong_count
+               FROM concepts c
+               LEFT JOIN (
+                   SELECT concept_id, COUNT(*) AS wrong_count
+                   FROM quiz_results WHERE correct = 0
+                   GROUP BY concept_id
+               ) w ON w.concept_id = c.id
+               WHERE c.last_studied IS NOT NULL AND c.mastery_level < 5
+               ORDER BY wrong_count DESC, c.mastery_level ASC, c.last_studied ASC
+               LIMIT ?""",
             (limit,),
         ).fetchall()
     return {"concepts": [dict(row) for row in rows]}

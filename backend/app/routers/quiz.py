@@ -24,7 +24,14 @@ QUIZ_TYPE_GUIDANCE = {
     "comprehension": "Write 2-3 multiple_choice questions that test recognition of core facts and definitions. Distractors should reflect plausible misconceptions, not random wrong answers.",
     "application": "Write 2 free_response questions that ask the learner to apply the concept to a concrete scenario or trade-off decision.",
     "connection": "Write 2 free_response questions that ask the learner to relate this concept to others they've studied, or draw an analogy.",
+    "pattern_recognition": "Write 2-3 multiple_choice questions. Each must describe a realistic backend-engineering problem scenario (e.g. rate limiting, log analysis, service reachability, cache eviction, scheduling, telemetry cleanup) WITHOUT mentioning the pattern name or showing any code, then ask which algorithm pattern applies and why. Options should be plausible alternative patterns; the explanation for the correct choice should come out during grading/feedback, not in the question itself.",
 }
+
+# Phase 6 ("Algorithm Patterns") quizzes get extra guidance appended on top of the
+# base quiz-type guidance, so the same comprehension/application/connection question
+# types are still generated, but framed around interview-pattern mastery specifically.
+PHASE_6_APPLICATION_GUIDANCE = "\nFrame each scenario as a real backend engineering problem (e.g. rate limiting, log analysis, service reachability, cache eviction, scheduling, telemetry cleanup) — not an abstract puzzle."
+PHASE_6_CONNECTION_GUIDANCE = "\nAt least one question should ask the learner to connect this pattern to their own backend/production experience (e.g. at Paychex) — where might this exact pattern have shown up in real systems they've worked on?"
 
 GENERATE_PROMPT = """You write quiz questions for a spaced-repetition learning app. Generate quiz questions for this concept:
 
@@ -137,7 +144,7 @@ def _pick_interleave_concept(conn, exclude_id: str):
 @router.post("/generate")
 async def generate(payload: GenerateRequest):
     with connection() as conn:
-        concept = conn.execute("SELECT title, description FROM concepts WHERE id=?", (payload.concept_id,)).fetchone()
+        concept = conn.execute("SELECT title, description, phase FROM concepts WHERE id=?", (payload.concept_id,)).fetchone()
         if not concept:
             raise HTTPException(404, f"Unknown concept: {payload.concept_id}")
 
@@ -148,6 +155,11 @@ async def generate(payload: GenerateRequest):
             book_context = f"\nRelevant book passages:\n{passages}\n"
 
     guidance = QUIZ_TYPE_GUIDANCE.get(payload.quiz_type, QUIZ_TYPE_GUIDANCE["comprehension"])
+    if concept["phase"] == "Phase 6":
+        if payload.quiz_type == "application":
+            guidance += PHASE_6_APPLICATION_GUIDANCE
+        elif payload.quiz_type == "connection":
+            guidance += PHASE_6_CONNECTION_GUIDANCE
 
     try:
         with connection() as conn:

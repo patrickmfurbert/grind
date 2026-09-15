@@ -61,6 +61,46 @@ def test_chat_uses_teach_back_prompt_when_mode_is_teach_back(client):
 
 
 @respx.mock
+def test_chat_uses_algo_pattern_prompt_for_phase_6_concept(client):
+    """Phase 6 ("Algorithm Patterns") gets the explain-then-problem-then-walkthrough
+    Socratic flow instead of the general open-ended tutor prompt."""
+    route = respx.post("https://openrouter.ai/api/v1/chat/completions").mock(
+        return_value=httpx.Response(200, content=SSE_BODY, headers={"content-type": "text/event-stream"})
+    )
+
+    response = client.post(
+        "/tutor/chat",
+        json={"concept_id": "two-pointers-pattern", "message": "Explain this pattern.", "conversation_history": []},
+    )
+    assert response.status_code == 200
+    sent_body = json.loads(route.calls.last.request.content)
+    system_prompt = sent_body["messages"][0]["content"]
+    assert "5 minutes" in system_prompt
+    assert "walk through the solution together" in system_prompt.lower()
+
+
+@respx.mock
+def test_chat_uses_junior_engineer_teach_back_prompt_for_phase_6_concept(client):
+    route = respx.post("https://openrouter.ai/api/v1/chat/completions").mock(
+        return_value=httpx.Response(200, content=SSE_BODY, headers={"content-type": "text/event-stream"})
+    )
+
+    response = client.post(
+        "/tutor/chat",
+        json={
+            "concept_id": "two-pointers-pattern",
+            "message": "Let me explain two pointers.",
+            "conversation_history": [],
+            "mode": "teach_back",
+        },
+    )
+    assert response.status_code == 200
+    sent_body = json.loads(route.calls.last.request.content)
+    system_prompt = sent_body["messages"][0]["content"]
+    assert "junior" in system_prompt.lower()
+
+
+@respx.mock
 def test_chat_uses_default_mastery_for_unknown_concept(client):
     respx.post("https://openrouter.ai/api/v1/chat/completions").mock(
         return_value=httpx.Response(200, content='data: [DONE]\n\n', headers={"content-type": "text/event-stream"})

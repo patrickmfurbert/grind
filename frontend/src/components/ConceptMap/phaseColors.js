@@ -6,6 +6,7 @@ const PHASE_COLORS = {
   "Phase 3": "#0891b2",
   "Phase 4": "#d97706",
   "Phase 5": "#dc2626",
+  "Phase 6": "#16a34a",
 };
 
 export function phaseColor(phase) {

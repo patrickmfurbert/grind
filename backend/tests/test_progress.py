@@ -42,3 +42,38 @@ def test_weak_spots_sorts_weakest_first(client):
 
     ids = [concept["id"] for concept in client.get("/progress/weak-spots").json()["concepts"]]
     assert ids.index("why-distributed-systems-fail") < ids.index("why-distributed-systems-exist")
+
+
+def test_weak_spots_ranks_by_wrong_count_before_mastery(client, monkeypatch):
+    """A concept missed twice on quizzes should outrank a lower-mastery concept that has
+    never been answered wrong, since wrong_count is the primary sort key."""
+    import backend.app.routers.quiz as quiz_module
+
+    frequently_missed = "why-distributed-systems-exist"
+    merely_low_mastery = "why-distributed-systems-fail"
+
+    async def fake_complete_json(messages, model_key="quiz_gen"):
+        return {
+            "questions": [
+                {
+                    "type": "multiple_choice",
+                    "prompt": "Q",
+                    "options": ["right", "wrong"],
+                    "correct_answer": "right",
+                }
+            ]
+        }
+
+    monkeypatch.setattr(quiz_module, "complete_json", fake_complete_json)
+
+    for _ in range(2):
+        questions = client.post(
+            "/quiz/generate",
+            json={"concept_id": frequently_missed, "quiz_type": "comprehension", "use_book_rag": False, "include_interleaved": False},
+        ).json()["questions"]
+        client.post("/quiz/submit", json={"question_id": questions[0]["id"], "answer": "wrong"})
+
+    client.post("/progress/mastery", json={"concept_id": merely_low_mastery, "mastery_level": 0})
+
+    ids = [concept["id"] for concept in client.get("/progress/weak-spots").json()["concepts"]]
+    assert ids.index(frequently_missed) < ids.index(merely_low_mastery)

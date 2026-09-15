@@ -17,10 +17,26 @@ router = APIRouter(prefix="/tutor", tags=["tutor"])
 
 PROMPT = """You are a Socratic tutor for Pat, a Software Engineer II who builds Java/Spring Boot microservices at Paychex using MongoDB, Kafka, Dapr, OpenShift, Kong, Jenkins, Gradle, Splunk, and OpenTelemetry. Pat transitioned from clinical nursing. Start from why, use useful visual or real-world analogies, make Pat defend answers, ask follow-up questions about failures and trade-offs, and get harder with demonstrated mastery. Current concept: {concept}. Mastery: {mastery}/5.{book_context}"""
 
+# Phase 6 ("Algorithm Patterns") uses a distinct tutoring flow from the rest of the
+# curriculum: instead of open-ended Socratic dialogue throughout, the tutor explains the
+# pattern, then hands Pat a concrete problem and steps back for a timed think period,
+# then walks the solution together asking WHY at each step (never just "what's next").
+ALGO_PATTERN_PROMPT = """You are a Socratic tutor for Pat, a Software Engineer II at Paychex, working through the "Algorithm Patterns" phase (owning core interview patterns cold, not memorizing solutions). Current pattern: {concept}. Mastery: {mastery}/5.{book_context}
+
+Follow this flow strictly:
+1. First explain WHY this pattern exists and what category of problem it solves, and how to recognize it (don't just define it).
+2. Then present ONE concrete problem for Pat to solve, and explicitly tell Pat to take about 5 minutes to think it through before responding — do not give hints or the approach yet.
+3. Once Pat responds (attempt, partial idea, or "ready"), walk through the solution together step by step, asking "why does this step work?" or "why not the alternative?" at every step — never just state the next line of the answer.
+4. Push Pat to state the time/space complexity and to name at least one situation where this pattern would NOT be the right choice."""
+
 # Teach-back flips the usual roles (the "protege effect"): Pat explains the concept to
 # the tutor instead of the tutor explaining it, which surfaces gaps Pat wouldn't notice
 # just recognizing/recalling the material passively.
 TEACH_BACK_PROMPT = """You are running a "teach-back" session for Pat, a Software Engineer II who builds Java/Spring Boot microservices at Paychex. Pat is going to explain the concept below to you as if teaching it to a student. Do NOT explain the concept yourself or supply the answer. Instead, listen, ask skeptical follow-up questions, probe for hand-waved details, missed trade-offs, and edge cases/failure scenarios, and point out any specific gaps or imprecise reasoning. Only acknowledge Pat has covered it well once the key ideas and trade-offs have actually been demonstrated soundly. Current concept: {concept}. Mastery: {mastery}/5.{book_context}"""
+
+# Phase 6 teach-back is framed specifically as explaining to a junior engineer, which
+# pushes Pat to justify the pattern in practical, mentoring terms rather than abstractly.
+TEACH_BACK_ALGO_PROMPT = """You are playing a junior backend engineer at Paychex who Pat (a Software Engineer II) is mentoring. Pat is going to explain the algorithm pattern below to you as if you're a junior engineer who has never seen it. Do NOT explain the pattern yourself or supply the answer. Ask the kind of questions a curious junior engineer would ask: "why not just use a simple loop/hash map instead?", "what would break if the input weren't sorted?", "when would this NOT be the right tool?" Push back on hand-waved reasoning and probe for the WHY behind every claim, not just the mechanics. Current pattern: {concept}. Mastery: {mastery}/5.{book_context}"""
 
 BOOK_CONTEXT_TEMPLATE = """
 
@@ -38,8 +54,9 @@ class ChatRequest(BaseModel):
 @router.post("/chat")
 async def chat(payload: ChatRequest):
     with connection() as conn:
-        concept = conn.execute("SELECT title, mastery_level FROM concepts WHERE id=?", (payload.concept_id,)).fetchone()
+        concept = conn.execute("SELECT title, mastery_level, phase FROM concepts WHERE id=?", (payload.concept_id,)).fetchone()
     name, mastery = (concept["title"], concept["mastery_level"]) if concept else (payload.concept_id, 0)
+    is_algo_phase = concept["phase"] == "Phase 6" if concept else False
 
     # Retrieve on the concept name rather than the student's raw answer: it stays a
     # consistent, on-topic query regardless of how the student phrases their response,
@@ -51,7 +68,10 @@ async def chat(payload: ChatRequest):
     # from the same page, but the citation UI only needs to show each source once.
     sources = list({(passage["title"], passage["page"]): {"title": passage["title"], "page": passage["page"]} for passage in book_passages}.values())
 
-    template = TEACH_BACK_PROMPT if payload.mode == "teach_back" else PROMPT
+    if payload.mode == "teach_back":
+        template = TEACH_BACK_ALGO_PROMPT if is_algo_phase else TEACH_BACK_PROMPT
+    else:
+        template = ALGO_PATTERN_PROMPT if is_algo_phase else PROMPT
     messages = [{"role": "system", "content": template.format(concept=name, mastery=mastery, book_context=book_context)}, *payload.conversation_history, {"role": "user", "content": payload.message}]
 
     async def events():

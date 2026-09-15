@@ -111,6 +111,10 @@ h1 { font-family: var(--mono); font-weight: 800; font-size: clamp(1.75rem, 6vw, 
 .weak-spots { margin: 1.5rem 0; }
 .weak-spots li { display: flex; align-items: center; gap: .6rem; }
 .weak-spots li button { flex: 1; }
+.wrong-count-badge { font-family: var(--mono); font-size: .75rem; color: #f87171; }
+.code-demos { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.code-demos button { font-family: var(--mono); border: 1px solid var(--border-soft); background: var(--panel); color: #9ca3af; padding: .4rem .9rem; border-radius: 999px; }
+.code-demos button.active { background: #16a34a; color: var(--bg); border-color: #16a34a; }
 
 /* Code lab */
 .code-editor .toolbar { display: flex; gap: .6rem; margin-bottom: .75rem; }

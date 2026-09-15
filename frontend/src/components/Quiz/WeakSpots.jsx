@@ -20,6 +20,7 @@ function WeakSpots({ onSelect }) {
         {weak.map((concept) => (
           <li key={concept.id}>
             <button onClick={() => onSelect(concept)}>{concept.title}</button>
+            {concept.wrong_count > 0 && <span className="wrong-count-badge">✗ {concept.wrong_count}</span>}
             <MasteryBadge level={concept.mastery_level} />
           </li>
         ))}

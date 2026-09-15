@@ -246,3 +246,46 @@ def test_due_today_lists_only_concepts_with_a_past_next_review(client, monkeypat
     client.post("/quiz/submit", json={"question_id": question_id, "answer": "To scale beyond one machine"})
     due = client.get("/quiz/due-today").json()["concepts"]
     assert not any(concept["id"] == CONCEPT_ID for concept in due)
+
+
+def _stub_generate_capturing_prompt(monkeypatch, response, captured):
+    import backend.app.routers.quiz as quiz_module
+
+    async def fake_complete_json(messages, model_key="quiz_gen"):
+        captured.append(messages[0]["content"])
+        return response
+
+    monkeypatch.setattr(quiz_module, "complete_json", fake_complete_json)
+
+
+def test_generate_supports_pattern_recognition_quiz_type_for_phase_6_concept(client, monkeypatch):
+    _stub_generate(monkeypatch, MCQ_GENERATE_RESPONSE)
+
+    response = client.post(
+        "/quiz/generate",
+        json={"concept_id": "two-pointers-pattern", "quiz_type": "pattern_recognition", "use_book_rag": False, "include_interleaved": False},
+    )
+    assert response.status_code == 200
+    assert response.json()["questions"][0]["type"] == "multiple_choice"
+
+
+def test_generate_adds_backend_framing_guidance_for_phase_6_application_quiz(client, monkeypatch):
+    captured = []
+    _stub_generate_capturing_prompt(monkeypatch, MCQ_GENERATE_RESPONSE, captured)
+
+    client.post(
+        "/quiz/generate",
+        json={"concept_id": "two-pointers-pattern", "quiz_type": "application", "use_book_rag": False, "include_interleaved": False},
+    )
+    assert "rate limiting" in captured[0].lower()
+
+
+def test_generate_does_not_add_phase_6_framing_for_non_phase_6_concept(client, monkeypatch):
+    captured = []
+    _stub_generate_capturing_prompt(monkeypatch, MCQ_GENERATE_RESPONSE, captured)
+
+    client.post(
+        "/quiz/generate",
+        json={"concept_id": CONCEPT_ID, "quiz_type": "application", "use_book_rag": False, "include_interleaved": False},
+    )
+    assert "rate limiting" not in captured[0].lower()
