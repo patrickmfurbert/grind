@@ -3,6 +3,7 @@ import QuizCard from "../components/Quiz/QuizCard";
 import QuizResult from "../components/Quiz/QuizResult";
 import SpacedRepetition from "../components/Quiz/SpacedRepetition";
 import NoConceptSelected from "../components/NoConceptSelected";
+import Spinner from "../components/Spinner";
 import { useQuiz } from "../hooks/useQuiz";
 import { useStore } from "../store";
 
@@ -32,7 +33,11 @@ function Quiz() {
         ))}
       </div>
       {error && <p className="upload-error">{error}</p>}
-      {generating && <p className="quiz-generating">Generating questions…</p>}
+      {generating && (
+        <p className="quiz-generating">
+          <Spinner /> Generating questions…
+        </p>
+      )}
       {!generating &&
         questions.map((question) => (
           <QuizCard

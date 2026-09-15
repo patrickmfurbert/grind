@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Spinner from "../Spinner";
 
 /** A single quiz question: multiple_choice renders as radio options (instantly graded),
  * free_response renders as a textarea (graded by the evaluation LLM on submit).
@@ -42,13 +43,27 @@ function QuizCard({ question, onSubmit, onGetHint, grading = false, isInterleave
           <textarea value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="Your answer..." rows={4} />
           {onGetHint && (
             <button type="button" className="link-button hint-button" onClick={requestHint} disabled={hintLoading}>
-              {hintLoading ? "Thinking of a hint…" : "Need a hint?"}
+              {hintLoading ? (
+                <>
+                  <Spinner /> Thinking of a hint…
+                </>
+              ) : (
+                "Need a hint?"
+              )}
             </button>
           )}
           {hint && <p className="quiz-hint">💡 {hint}</p>}
         </>
       )}
-      <button disabled={!answer || grading}>{grading ? "Grading…" : "Submit"}</button>
+      <button disabled={!answer || grading}>
+        {grading ? (
+          <>
+            <Spinner /> Grading…
+          </>
+        ) : (
+          "Submit"
+        )}
+      </button>
     </form>
   );
 }
