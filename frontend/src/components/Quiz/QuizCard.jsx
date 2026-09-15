@@ -2,13 +2,13 @@ import { useState } from "react";
 
 /** A single quiz question: multiple_choice renders as radio options (instantly graded),
  * free_response renders as a textarea (graded by the evaluation LLM on submit). */
-function QuizCard({ question, onSubmit }) {
+function QuizCard({ question, onSubmit, grading = false }) {
   const [answer, setAnswer] = useState("");
   const isMultipleChoice = question.type === "multiple_choice";
 
   function submit(event) {
     event.preventDefault();
-    if (!answer) return;
+    if (!answer || grading) return;
     onSubmit(question.id, answer);
   }
 
@@ -27,7 +27,7 @@ function QuizCard({ question, onSubmit }) {
       ) : (
         <textarea value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="Your answer..." rows={4} />
       )}
-      <button disabled={!answer}>Submit</button>
+      <button disabled={!answer || grading}>{grading ? "Grading…" : "Submit"}</button>
     </form>
   );
 }

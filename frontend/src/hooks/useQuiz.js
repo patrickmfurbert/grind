@@ -6,10 +6,13 @@ export function useQuiz(conceptId) {
   const [questions, setQuestions] = useState([]);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [grading, setGrading] = useState(false);
 
   const generate = useCallback(
     async (quizType, useBookRag = false) => {
       setError("");
+      setGenerating(true);
       try {
         const data = await api("/quiz/generate", {
           method: "POST",
@@ -21,6 +24,8 @@ export function useQuiz(conceptId) {
       } catch {
         setQuestions([]);
         setError("Couldn't generate questions right now. Please try again.");
+      } finally {
+        setGenerating(false);
       }
     },
     [conceptId]
@@ -29,6 +34,7 @@ export function useQuiz(conceptId) {
   const submit = useCallback(
     async (questionId, answer, quizType) => {
       setError("");
+      setGrading(true);
       try {
         const data = await api("/quiz/submit", {
           method: "POST",
@@ -40,10 +46,12 @@ export function useQuiz(conceptId) {
       } catch {
         setError("Couldn't grade that answer right now. Please try again.");
         return null;
+      } finally {
+        setGrading(false);
       }
     },
     [conceptId]
   );
 
-  return { questions, result, error, generate, submit };
+  return { questions, result, error, generating, grading, generate, submit };
 }

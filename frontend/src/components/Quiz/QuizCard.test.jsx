@@ -44,4 +44,10 @@ describe("QuizCard", () => {
     render(<QuizCard question={mcqQuestion} onSubmit={vi.fn()} />);
     expect(screen.getByText("Submit")).toBeDisabled();
   });
+
+  it("shows a grading state and disables submit while grading is in progress", () => {
+    render(<QuizCard question={freeResponseQuestion} onSubmit={vi.fn()} grading />);
+    expect(screen.getByText("Grading…")).toBeInTheDocument();
+    expect(screen.getByText("Grading…")).toBeDisabled();
+  });
 });

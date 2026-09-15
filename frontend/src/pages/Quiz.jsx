@@ -12,7 +12,7 @@ const QUIZ_TYPES = ["comprehension", "application", "connection"];
 function Quiz() {
   const { activeConcept, setActiveConcept } = useStore();
   const [quizType, setQuizType] = useState("comprehension");
-  const { questions, result, error, generate, submit } = useQuiz(activeConcept?.id);
+  const { questions, result, error, generating, grading, generate, submit } = useQuiz(activeConcept?.id);
 
   useEffect(() => {
     if (activeConcept) generate(quizType);
@@ -31,9 +31,16 @@ function Quiz() {
         ))}
       </div>
       {error && <p className="upload-error">{error}</p>}
-      {questions.map((question) => (
-        <QuizCard key={question.id} question={question} onSubmit={(questionId, answer) => submit(questionId, answer, quizType)} />
-      ))}
+      {generating && <p className="quiz-generating">Generating questions…</p>}
+      {!generating &&
+        questions.map((question) => (
+          <QuizCard
+            key={question.id}
+            question={question}
+            grading={grading}
+            onSubmit={(questionId, answer) => submit(questionId, answer, quizType)}
+          />
+        ))}
       <QuizResult result={result} />
       <SpacedRepetition onSelect={setActiveConcept} />
     </section>

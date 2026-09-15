@@ -63,6 +63,28 @@ def test_generate_unknown_concept_returns_404(client, monkeypatch):
     assert response.status_code == 404
 
 
+def test_generate_asks_the_llm_to_avoid_repeating_recently_seen_prompts(client, monkeypatch):
+    import backend.app.routers.quiz as quiz_module
+
+    seen_prompts = []
+
+    async def fake_complete_json(messages, model_key="quiz_gen"):
+        seen_prompts.append(messages[0]["content"])
+        return MCQ_GENERATE_RESPONSE
+
+    monkeypatch.setattr(quiz_module, "complete_json", fake_complete_json)
+
+    # First generation: no history yet, so no "already seen" section.
+    client.post("/quiz/generate", json={"concept_id": CONCEPT_ID, "quiz_type": "comprehension", "use_book_rag": False})
+    assert "already seen these questions" not in seen_prompts[0]
+
+    # Second generation: the previously generated prompt should be fed back so the
+    # model rotates to something new instead of repeating itself.
+    client.post("/quiz/generate", json={"concept_id": CONCEPT_ID, "quiz_type": "comprehension", "use_book_rag": False})
+    assert "already seen these questions" in seen_prompts[1]
+    assert MCQ_GENERATE_RESPONSE["questions"][0]["prompt"] in seen_prompts[1]
+
+
 def test_generate_surfaces_502_when_llm_fails(client, monkeypatch):
     import backend.app.routers.quiz as quiz_module
 

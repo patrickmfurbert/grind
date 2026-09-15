@@ -32,6 +32,7 @@ Title: {title}
 Description: {description}
 {book_context}
 {guidance}
+{recent_prompts}
 
 Respond with ONLY a JSON object of this exact shape, no other text:
 {{"questions": [{{"type": "multiple_choice", "prompt": "...", "options": ["...", "...", "...", "..."], "correct_answer": "..."}}, {{"type": "free_response", "prompt": "...", "correct_answer": "A model answer covering the key point(s), used only for grading."}}]}}
@@ -64,12 +65,21 @@ class SubmitRequest(BaseModel):
     quiz_type: str = "comprehension"
 
 
+# How many of the most recently generated prompts (for this concept + quiz type) to
+# feed back to the LLM so it can rotate to new questions instead of repeating itself.
+RECENT_PROMPT_LIMIT = 8
+
+
 @router.post("/generate")
 async def generate(payload: GenerateRequest):
     with connection() as conn:
         concept = conn.execute("SELECT title, description FROM concepts WHERE id=?", (payload.concept_id,)).fetchone()
-    if not concept:
-        raise HTTPException(404, f"Unknown concept: {payload.concept_id}")
+        if not concept:
+            raise HTTPException(404, f"Unknown concept: {payload.concept_id}")
+        recent = conn.execute(
+            "SELECT prompt FROM quiz_questions WHERE concept_id=? AND quiz_type=? ORDER BY created_at DESC LIMIT ?",
+            (payload.concept_id, payload.quiz_type, RECENT_PROMPT_LIMIT),
+        ).fetchall()
 
     book_context = ""
     if payload.use_book_rag:
@@ -77,8 +87,19 @@ async def generate(payload: GenerateRequest):
         if passages:
             book_context = f"\nRelevant book passages:\n{passages}\n"
 
+    recent_prompts = ""
+    if recent:
+        seen = "\n".join(f"- {row['prompt']}" for row in recent)
+        recent_prompts = f"\nThe learner has already seen these questions recently — write different ones, not close rewordings:\n{seen}\n"
+
     guidance = QUIZ_TYPE_GUIDANCE.get(payload.quiz_type, QUIZ_TYPE_GUIDANCE["comprehension"])
-    prompt = GENERATE_PROMPT.format(title=concept["title"], description=concept["description"] or "", book_context=book_context, guidance=guidance)
+    prompt = GENERATE_PROMPT.format(
+        title=concept["title"],
+        description=concept["description"] or "",
+        book_context=book_context,
+        guidance=guidance,
+        recent_prompts=recent_prompts,
+    )
 
     try:
         generated = await complete_json([{"role": "user", "content": prompt}], model_key="quiz_gen")

@@ -124,6 +124,7 @@ h1 { font-family: var(--mono); font-weight: 800; font-size: clamp(1.75rem, 6vw, 
 .upload-zone > button[type="button"]:not(.link-button) { padding: .7rem; border-radius: .5rem; border: 0; background: var(--accent-strong); color: var(--bg); font-weight: 700; cursor: pointer; }
 .upload-zone > button[type="button"]:not(.link-button):disabled { background: var(--border-soft); color: #9ca3af; cursor: not-allowed; }
 .upload-error { color: #f87171; font-size: .85rem; margin: 0; }
+.quiz-generating { color: #9ca3af; font-style: italic; }
 .book-library { list-style: none; padding: 0; display: grid; gap: .5rem; }
 .book-library li { display: flex; flex-wrap: wrap; gap: .5rem .75rem; align-items: center; background: var(--panel); border: 1px solid var(--border-soft); padding: .7rem 1rem; border-radius: .5rem; }
 .book-library li strong { min-width: 0; overflow-wrap: anywhere; }
